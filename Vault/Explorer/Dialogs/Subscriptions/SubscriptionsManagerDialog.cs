@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Net.Http;
     using System.Net.Http.Headers;
@@ -15,6 +16,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Model.Files.Aliases;
     using Microsoft.Vault.Library;
+    using Newtonsoft.Json.Linq;
     using Newtonsoft.Json;
     using Settings = Microsoft.Vault.Explorer.Settings;
     using Utils = Microsoft.Vault.Explorer.Common.Utils;
@@ -23,13 +25,16 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
     {
         private const string ApiVersion = "api-version=2016-07-01";
         private const string ManagmentEndpoint = "https://management.azure.com/";
+        private const string TenantsApiVersion = "api-version=2020-01-01";
         private const string AddAccountText = "Add New Account";
         private const string SelectAccountPrompt = "Select an account or add new...";
+        private const string SelectTenantPrompt = "Select a tenant...";
 
         private AccountItem _currentAccountItem;
         private AuthenticationResult _currentAuthResult;
         private KeyVaultManagementClient _currentKeyVaultMgmtClient;
         private readonly HttpClient _httpClient;
+        private bool _suppressTenantSelectionEvent;
 
         public VaultAlias CurrentVaultAlias { get; private set; }
 
@@ -53,6 +58,9 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             }
 
             this.uxComboBoxAccounts.Items.Add(AddAccountText);
+            this.uxComboBoxTenants.Items.Clear();
+            this.uxComboBoxTenants.Items.Add(SelectTenantPrompt);
+            this.uxComboBoxTenants.SelectedIndex = 0;
 
             // Only auto-select if we have pre-configured accounts, otherwise let user choose
             if (hasPreConfiguredAccounts)
@@ -91,7 +99,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                     await this.GetAuthenticationTokenAsync();
                     if (this._currentAuthResult.Account != null)
                     {
-                        this._currentAccountItem.UserAlias = this._currentAuthResult.Account.Username.Split('@')[0];
+                        this._currentAccountItem.UserAlias = this._currentAuthResult.Account.Username;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(this._currentAuthResult?.TenantId))
+                    {
+                        this._currentAccountItem.DomainHint = this._currentAuthResult.TenantId;
                     }
 
                     break;
@@ -105,7 +118,61 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                 return;
             }
 
-            using (var op = this.NewUxOperationWithProgress(this.uxComboBoxAccounts))
+            await this.LoadTenantsAsync();
+            await this.LoadSubscriptionsAsync();
+        }
+
+        private async Task LoadTenantsAsync()
+        {
+            using (var op = this.NewUxOperationWithProgress(this.uxComboBoxAccounts, this.uxComboBoxTenants))
+            {
+                try
+                {
+                    this._httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", this._currentAuthResult.AccessToken);
+                    var hrm = await this._httpClient.GetAsync($"{ManagmentEndpoint}tenants?{TenantsApiVersion}", op.CancellationToken);
+                    var json = await hrm.Content.ReadAsStringAsync();
+                    hrm.EnsureSuccessStatusCode();
+                    JObject payload = JObject.Parse(json);
+                    List<TenantItem> tenants = payload["value"]?
+                        .Select(v => new TenantItem((string)v["tenantId"], (string)v["defaultDomain"]))
+                        .Where(t => !string.IsNullOrWhiteSpace(t.TenantId))
+                        .ToList() ?? new List<TenantItem>();
+
+                    if (tenants.Count == 0)
+                    {
+                        return;
+                    }
+
+                    this._suppressTenantSelectionEvent = true;
+                    this.uxComboBoxTenants.Items.Clear();
+                    foreach (TenantItem tenant in tenants)
+                    {
+                        this.uxComboBoxTenants.Items.Add(tenant);
+                    }
+
+                    TenantItem selectedTenant = tenants.FirstOrDefault(t => string.Equals(t.TenantId, this._currentAuthResult.TenantId, StringComparison.OrdinalIgnoreCase))
+                                               ?? tenants.FirstOrDefault(t => string.Equals(t.TenantId, this._currentAccountItem.DomainHint, StringComparison.OrdinalIgnoreCase))
+                                               ?? tenants[0];
+                    this.uxComboBoxTenants.SelectedItem = selectedTenant;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Failed to load subscriptions: {ex.Message}",
+                        "Subscriptions error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    this._suppressTenantSelectionEvent = false;
+                }
+            }
+        }
+
+        private async Task LoadSubscriptionsAsync()
+        {
+            using (var op = this.NewUxOperationWithProgress(this.uxComboBoxAccounts, this.uxComboBoxTenants))
             {
                 try
                 {
@@ -142,6 +209,23 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                         MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private async void uxComboBoxTenants_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (this._suppressTenantSelectionEvent || this.uxComboBoxTenants.SelectedItem is not TenantItem tenant)
+            {
+                return;
+            }
+
+            if (this._currentAccountItem == null || string.Equals(this._currentAccountItem.DomainHint, tenant.TenantId, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            this._currentAccountItem.DomainHint = tenant.TenantId;
+            await this.GetAuthenticationTokenAsync();
+            await this.LoadSubscriptionsAsync();
         }
 
         private async void uxListViewSubscriptions_SelectedIndexChanged(object sender, EventArgs e)
@@ -220,8 +304,8 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                     return;
                 }
 
-                this._currentAccountItem.UserAlias = userLogin[0];
-                this._currentAccountItem.DomainHint = userLogin[1];
+                this._currentAccountItem.UserAlias = userAccountName;
+                this._currentAccountItem.DomainHint = string.IsNullOrWhiteSpace(this._currentAuthResult.TenantId) ? userLogin[1] : this._currentAuthResult.TenantId;
                 if (!Settings.Default.AddUserAccountName(userAccountName))
                 {
                     AccountItem existing = this.uxComboBoxAccounts.Items.OfType<AccountItem>()
@@ -266,6 +350,20 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             VaultAccessUserInteractive vaui = new VaultAccessUserInteractive(this._currentAccountItem.DomainHint, this._currentAccountItem.UserAlias);
             string[] scopes = VaultAccess.ConvertResourceToScopes(ManagmentEndpoint);
             this._currentAuthResult = await vaui.AcquireTokenAsync(scopes, this._currentAccountItem.UserAlias);
+        }
+
+        private sealed class TenantItem
+        {
+            public string TenantId { get; }
+            public string Domain { get; }
+
+            public TenantItem(string tenantId, string domain)
+            {
+                this.TenantId = tenantId;
+                this.Domain = domain;
+            }
+
+            public override string ToString() => string.IsNullOrWhiteSpace(this.Domain) ? this.TenantId : $"{this.Domain} ({this.TenantId})";
         }
     }
 }

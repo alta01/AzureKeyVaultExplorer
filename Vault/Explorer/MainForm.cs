@@ -210,6 +210,16 @@ namespace Microsoft.Vault.Explorer
             {
                 foreach (var vault in newVaults)
                 {
+                    if (string.IsNullOrWhiteSpace(vault.UserAlias) || !vault.UserAlias.Contains("@"))
+                    {
+                        MessageBox.Show(
+                            $"Vault '{vault.VaultNames[0]}' was not saved because it is not bound to a specific signed-in account.\n\nUse 'Pick vault from subscription...' and sign in first.",
+                            "Account required",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return false;
+                    }
+
                     bool success = VaultConfigurationManager.AddVaultConfiguration(
                         vault.VaultNames[0], // vault name
                         vault.Alias, // alias name
@@ -365,7 +375,7 @@ namespace Microsoft.Vault.Explorer
         {
             this.CurrentVault = new Vault(Utils.FullPathToJsonFile(Settings.Default.VaultsJsonFileLocation), VaultAccessTypeEnum.ReadWrite, this.CurrentVaultAlias.VaultNames);
             // In case that subscription is chosen by the dialog, overwrite permissions taken from vaults.json
-            if (this.CurrentVaultAlias.UserAlias != null || this.CurrentVault.VaultsConfig.Count == 0)
+            if (!string.IsNullOrWhiteSpace(this.CurrentVaultAlias.UserAlias) || this.CurrentVault.VaultsConfig.Count == 0)
             {
                 this.CurrentVault.VaultsConfig[this.CurrentVaultAlias.VaultNames[0]] = new VaultAccessType(
                     new VaultAccess[] { new VaultAccessUserInteractive(this.CurrentVaultAlias.DomainHint, this.CurrentVaultAlias.UserAlias) },

@@ -137,6 +137,8 @@ namespace Microsoft.Vault.Library
             return this._publicClientApp;
         }
 
+        private static bool IsGuid(string value) => Guid.TryParse(value, out _);
+
         protected override async Task<AuthenticationResult> AcquireTokenSilentAsync(string[] scopes, string userAlias = "")
         {
             var app = this.GetPublicClientApp();
@@ -176,6 +178,10 @@ namespace Microsoft.Vault.Library
                 if (userAlias.Contains('@'))
                 {
                     builder = builder.WithLoginHint($"{userAlias}");
+                }
+                else if (IsGuid(this.DomainHint))
+                {
+                    builder = builder.WithLoginHint(userAlias);
                 }
                 else
                 {

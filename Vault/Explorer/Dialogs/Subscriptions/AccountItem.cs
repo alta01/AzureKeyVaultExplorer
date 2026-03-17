@@ -13,6 +13,6 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             this.UserAlias = userAlias ?? Globals.DefaultUserName;
         }
 
-        public override string ToString() => $"{this.UserAlias}@{this.DomainHint}";
+        public override string ToString() => this.UserAlias.Contains("@") ? this.UserAlias : $"{this.UserAlias}@{this.DomainHint}";
     }
 }

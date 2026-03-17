@@ -34,6 +34,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             System.Windows.Forms.ColumnHeader columnHeader1;
             System.Windows.Forms.ColumnHeader columnHeader2;
             System.Windows.Forms.ToolStripLabel toolStripLabel1;
+            System.Windows.Forms.ToolStripLabel toolStripLabel2;
             System.Windows.Forms.SplitContainer splitContainer1;
             System.Windows.Forms.SplitContainer splitContainer2;
             System.Windows.Forms.ImageList imageList1;
@@ -43,6 +44,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             this.uxListViewVaults = new System.Windows.Forms.ListView();
             this.uxPropertyGridVault = new System.Windows.Forms.PropertyGrid();
             this.uxComboBoxAccounts = new System.Windows.Forms.ToolStripComboBox();
+            this.uxComboBoxTenants = new System.Windows.Forms.ToolStripComboBox();
             this.uxButtonCancelOperation = new System.Windows.Forms.ToolStripButton();
             this.uxProgressBar = new System.Windows.Forms.ToolStripProgressBar();
             this.uxStatusLabel = new System.Windows.Forms.ToolStripLabel();
@@ -53,6 +55,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
+            toolStripLabel2 = new System.Windows.Forms.ToolStripLabel();
             splitContainer1 = new System.Windows.Forms.SplitContainer();
             splitContainer2 = new System.Windows.Forms.SplitContainer();
             imageList1 = new System.Windows.Forms.ImageList(this.components);
@@ -93,6 +96,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             toolStripLabel1.Name = "toolStripLabel1";
             toolStripLabel1.Size = new System.Drawing.Size(63, 25);
             toolStripLabel1.Text = "Account";
+            // 
+            // toolStripLabel2
+            // 
+            toolStripLabel2.Name = "toolStripLabel2";
+            toolStripLabel2.Size = new System.Drawing.Size(51, 25);
+            toolStripLabel2.Text = "Tenant";
             // 
             // splitContainer1
             // 
@@ -204,6 +213,8 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             toolStripLabel1,
             this.uxComboBoxAccounts,
+            toolStripLabel2,
+            this.uxComboBoxTenants,
             this.uxButtonCancelOperation,
             this.uxProgressBar,
             this.uxStatusLabel});
@@ -220,6 +231,14 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             this.uxComboBoxAccounts.Name = "uxComboBoxAccounts";
             this.uxComboBoxAccounts.Size = new System.Drawing.Size(351, 28);
             this.uxComboBoxAccounts.SelectedIndexChanged += new System.EventHandler(this.uxComboBoxAccounts_SelectedIndexChanged);
+            // 
+            // uxComboBoxTenants
+            // 
+            this.uxComboBoxTenants.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.uxComboBoxTenants.DropDownWidth = 260;
+            this.uxComboBoxTenants.Name = "uxComboBoxTenants";
+            this.uxComboBoxTenants.Size = new System.Drawing.Size(260, 28);
+            this.uxComboBoxTenants.SelectedIndexChanged += new System.EventHandler(this.uxComboBoxTenants_SelectedIndexChanged);
             // 
             // uxButtonCancelOperation
             // 
@@ -315,6 +334,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
         private System.Windows.Forms.Button uxButtonCancel;
         private System.Windows.Forms.Button uxButtonOK;
         private System.Windows.Forms.ToolStripComboBox uxComboBoxAccounts;
+        private System.Windows.Forms.ToolStripComboBox uxComboBoxTenants;
         private System.Windows.Forms.ToolStripProgressBar uxProgressBar;
         private System.Windows.Forms.ToolStripButton uxButtonCancelOperation;
         private System.Windows.Forms.ToolStripLabel uxStatusLabel;
