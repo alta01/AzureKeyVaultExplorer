@@ -45,6 +45,12 @@ namespace Microsoft.Vault.Explorer.Common
                 return Empty;
             }
 
+            // Ignore ClickOnce deployment URIs that do not include a vault: payload.
+            if (!vaultUri.StartsWith("vault:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                return Empty;
+            }
+
             return new ActivationUri(vaultUri.TrimEnd('/', '\\'));
         }
 

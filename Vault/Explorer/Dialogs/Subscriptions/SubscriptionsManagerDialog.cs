@@ -134,7 +134,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                     hrm.EnsureSuccessStatusCode();
                     JObject payload = JObject.Parse(json);
                     List<TenantItem> tenants = payload["value"]?
-                        .Select(v => new TenantItem((string)v["tenantId"], (string)v["defaultDomain"]))
+                        .Select(v => new TenantItem((string)v["tenantId"], (string)v["displayName"], (string)v["defaultDomain"]))
                         .Where(t => !string.IsNullOrWhiteSpace(t.TenantId))
                         .ToList() ?? new List<TenantItem>();
 
@@ -158,8 +158,8 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        $"Failed to load subscriptions: {ex.Message}",
-                        "Subscriptions error",
+                        $"Failed to load tenants: {ex.Message}",
+                        "Tenant load error",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                 }
@@ -355,15 +355,21 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
         private sealed class TenantItem
         {
             public string TenantId { get; }
+            public string DisplayName { get; }
             public string Domain { get; }
 
-            public TenantItem(string tenantId, string domain)
+            public TenantItem(string tenantId, string displayName, string domain)
             {
                 this.TenantId = tenantId;
+                this.DisplayName = displayName;
                 this.Domain = domain;
             }
 
-            public override string ToString() => string.IsNullOrWhiteSpace(this.Domain) ? this.TenantId : $"{this.Domain} ({this.TenantId})";
+            public override string ToString()
+            {
+                string name = !string.IsNullOrWhiteSpace(this.DisplayName) ? this.DisplayName : this.Domain;
+                return string.IsNullOrWhiteSpace(name) ? this.TenantId : $"{name} ({this.TenantId})";
+            }
         }
     }
 }
