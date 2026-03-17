@@ -4,7 +4,7 @@
 
 Azure Key Vault Explorer - be productive when working with secrets!
 
-**[Click here to install the latest version (https://alta01.github.io/AzureKeyVaultExplorer)](https://alta01.github.io/AzureKeyVaultExplorer)**
+**[Click here to install the latest version (VaultExplorer.application)](https://alta01.github.io/AzureKeyVaultExplorer/VaultExplorer.application)**
 
 If the install link does not load yet, enable **GitHub Pages** in this fork (`Settings -> Pages`) and publish from the branch that contains this repository.
 

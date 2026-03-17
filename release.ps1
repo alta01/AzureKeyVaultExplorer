@@ -7,6 +7,7 @@ param (
 
 $appName = 'VaultExplorer'
 $projDir = 'Vault\Explorer'
+$installManifest = "$appName.application"
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -123,8 +124,17 @@ try {
 
     # Copy new application files.
     Write-Output 'Copying new files...'
-    Copy-Item -Path "../$outDir/Application Files", "../$outDir/$appName.application" `
+    Copy-Item -Path "../$outDir/Application Files", "../$outDir/$installManifest" `
         -Destination . -Recurse
+
+    # Ensure GitHub Pages root always points to this fork's current ClickOnce manifest.
+    Set-Content -Path 'index.html' -Encoding UTF8 -Value @"
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Redirecting to $installManifest</title>
+<meta http-equiv="refresh" content="0; URL=$installManifest">
+<link rel="canonical" href="$installManifest">
+"@
 
     # Stage and commit.
     Write-Output 'Staging...'
