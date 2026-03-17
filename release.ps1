@@ -51,15 +51,11 @@ if (Test-Path $outDir) {
 # Publish the application.
 Push-Location $projDir
 try {
-    Write-Output 'Restoring:'
-    dotnet restore -r win-x64
-    if ($LASTEXITCODE -ne 0) {
-        throw "dotnet restore failed with exit code $LASTEXITCODE"
-    }
-
-    Write-Output 'Publishing:'
-    & $msBuildPath /target:publish /p:PublishProfile=ClickOnceProfile `
+    Write-Output 'Restoring + Publishing:'
+    & $msBuildPath /restore /target:publish `
+        /p:RuntimeIdentifier=win-x64 `
         /p:ApplicationVersion=$version /p:Configuration=Release `
+        /p:PublishProfile=ClickOnceProfile `
         /p:PublishDir=$publishDir /v:m
     if ($LASTEXITCODE -ne 0) {
         throw "MSBuild publish failed with exit code $LASTEXITCODE"
