@@ -4,8 +4,10 @@
 namespace Microsoft.Vault.Explorer.Dialogs
 {
     using System;
+    using System.ComponentModel;
     using System.Threading.Tasks;
     using System.Windows.Forms;
+    using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Model;
     using Microsoft.Vault.Explorer.Model.PropObjects;
@@ -16,6 +18,8 @@ namespace Microsoft.Vault.Explorer.Dialogs
         protected readonly ItemDialogBaseMode _mode;
         protected bool _changed;
         public object OriginalObject; //  Will be NULL in New mode and current value in case of Edit mode
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public PropertyObject PropertyObject { get; protected set; }
 
         public ItemDialogBase()
@@ -28,6 +32,12 @@ namespace Microsoft.Vault.Explorer.Dialogs
             this._session = session;
             this.Text = title;
             this._mode = mode;
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            UiModernizer.Apply(this);
         }
 
         protected virtual void InvalidateOkButton()

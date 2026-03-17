@@ -86,6 +86,7 @@ namespace Microsoft.Vault.Library
     public class VaultAccessUserInteractive : VaultAccess
     {
         internal const string PowerShellApplicationId = "1950a258-227b-4e31-a9cf-717495945fc2";
+        private const string SharedTokenCachePartition = "vault-explorer";
 
         [JsonProperty]
         public readonly string DomainHint;
@@ -93,18 +94,52 @@ namespace Microsoft.Vault.Library
         [JsonProperty]
         public readonly string UserAliasType;
 
+        [JsonProperty]
+        public readonly string TenantId;
+
         private IPublicClientApplication _publicClientApp;
 
         public VaultAccessUserInteractive(string domainHint) : base(PowerShellApplicationId, 2)
         {
             this.DomainHint = string.IsNullOrEmpty(domainHint) ? "common" : domainHint;
+            this.UserAliasType = string.Empty;
+            this.TenantId = string.Empty;
         }
 
         [JsonConstructor]
-        public VaultAccessUserInteractive(string domainHint, string UserAlias) : base(PowerShellApplicationId, 2)
+        public VaultAccessUserInteractive(string domainHint, string UserAlias, string tenantId = null) : base(PowerShellApplicationId, 2)
         {
             this.DomainHint = string.IsNullOrEmpty(domainHint) ? "common" : domainHint;
             this.UserAliasType = UserAlias ?? string.Empty;
+            this.TenantId = tenantId ?? string.Empty;
+        }
+
+        private string GetAuthorityTenant()
+        {
+            string tenant = string.IsNullOrWhiteSpace(this.TenantId) ? this.DomainHint : this.TenantId;
+            return IsSafeAuthoritySegment(tenant) ? tenant : "common";
+        }
+
+        private static bool IsSafeAuthoritySegment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            if (string.Equals(value, "common", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "organizations", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(value, "consumers", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (Guid.TryParse(value, out _))
+            {
+                return true;
+            }
+
+            return value.All(c => char.IsLetterOrDigit(c) || c == '.' || c == '-');
         }
 
         private IPublicClientApplication GetPublicClientApp()
@@ -113,7 +148,7 @@ namespace Microsoft.Vault.Library
             {
                 var builder = PublicClientApplicationBuilder
                     .Create(this.ClientId)
-                    .WithAuthority($"https://login.microsoftonline.com/{this.DomainHint}")
+                    .WithAuthority($"https://login.microsoftonline.com/{this.GetAuthorityTenant()}")
                     .WithRedirectUri("http://localhost")
                     .WithDefaultRedirectUri();
 
@@ -130,7 +165,8 @@ namespace Microsoft.Vault.Library
                 }
 
                 // Configure token cache
-                var tokenCache = new FileTokenCache(this.DomainHint);
+                // Use a shared cache partition to avoid repeated prompts when authority/login hints change.
+                var tokenCache = new FileTokenCache(SharedTokenCachePartition);
                 tokenCache.ConfigureTokenCache(this._publicClientApp.UserTokenCache);
             }
 
@@ -144,16 +180,29 @@ namespace Microsoft.Vault.Library
 
             if (!string.IsNullOrEmpty(userAlias))
             {
-                var account = accounts.FirstOrDefault(a => a.Username.StartsWith(userAlias, StringComparison.OrdinalIgnoreCase));
+                var account = accounts.FirstOrDefault(a => string.Equals(a.Username, userAlias, StringComparison.OrdinalIgnoreCase));
+                if (account == null && false == userAlias.Contains("@") && false == string.IsNullOrWhiteSpace(this.DomainHint) && false == string.Equals(this.DomainHint, "common", StringComparison.OrdinalIgnoreCase))
+                {
+                    account = accounts.FirstOrDefault(a => string.Equals(a.Username, $"{userAlias}@{this.DomainHint}", StringComparison.OrdinalIgnoreCase));
+                }
+
                 if (account != null)
                 {
                     return await app.AcquireTokenSilent(scopes, account).ExecuteAsync();
                 }
+
+                throw new MsalUiRequiredException("account_not_found", $"No cached account found for '{userAlias}'.");
             }
 
-            if (accounts.Any())
+            IAccount[] accountArray = accounts.ToArray();
+            if (accountArray.Length == 1)
             {
-                return await app.AcquireTokenSilent(scopes, accounts.First()).ExecuteAsync();
+                return await app.AcquireTokenSilent(scopes, accountArray[0]).ExecuteAsync();
+            }
+
+            if (accountArray.Length > 1)
+            {
+                throw new MsalUiRequiredException("multiple_accounts", "Multiple cached accounts are available. Interactive selection is required.");
             }
 
             throw new MsalUiRequiredException("no_account", "No account found in cache");

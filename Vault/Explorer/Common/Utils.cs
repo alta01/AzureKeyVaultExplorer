@@ -197,7 +197,7 @@ namespace Microsoft.Vault.Explorer.Common
                 var n = Enumerable.Range(0, 1).Select(i => NumbersSet[r.Next(0, NumbersSet.Length)]);
                 var s = Enumerable.Range(0, 4).Select(i => SpecialCharsSet[r.Next(0, SpecialCharsSet.Length)]);
                 var a = Enumerable.Range(0, length - 11).Select(i => All[r.Next(0, All.Length)]);
-                return Encoding.ASCII.GetString(u.Concat(l).Concat(n).Concat(s).Concat(a).Shuffle().ToArray());
+                return Encoding.ASCII.GetString(Microsoft.Vault.Library.Utils.Shuffle(u.Concat(l).Concat(n).Concat(s).Concat(a)).ToArray());
             }
         }
 

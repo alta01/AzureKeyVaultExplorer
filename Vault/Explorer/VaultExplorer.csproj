@@ -2,7 +2,7 @@
   <Import Project="..\Build\AutoVersioning.props" />
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <OutputType>WinExe</OutputType>
     <RootNamespace>Microsoft.Vault.Explorer</RootNamespace>
@@ -17,7 +17,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <NoWarn>;NU1507</NoWarn>
-    <GenerateManifests>true</GenerateManifests>
+    <GenerateManifests>false</GenerateManifests>
     <TargetZone>LocalIntranet</TargetZone>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <SignAssembly>True</SignAssembly>
@@ -29,6 +29,7 @@
   <ItemGroup>
     <PackageReference Include="fernandreu.ScintillaNET" Version="4.2.0" />
     <PackageReference Include="Microsoft.Azure.Management.KeyVault" Version="3.1.0" />
+    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.24" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.77.1" />
     <PackageReference Include="Microsoft.Identity.Client.Desktop" Version="4.77.1" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.9" />

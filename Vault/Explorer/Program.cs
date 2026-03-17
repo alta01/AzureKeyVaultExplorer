@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Explorer
 {
     using System;
+    using System.Drawing;
     using System.IO;
     using System.Linq;
     using System.Reflection;
@@ -28,6 +29,8 @@ namespace Microsoft.Vault.Explorer
         private static void Main()
         {
             IdleTimer.Enabled = false;
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+            Application.SetDefaultFont(new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point));
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.ApplicationExit += (s, e) => DeleteTokenCacheOnApplicationExit();

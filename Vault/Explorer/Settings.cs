@@ -14,6 +14,28 @@ namespace Microsoft.Vault.Explorer
     using System.Windows.Forms.Design;
     using Microsoft.Vault.Explorer.Controls.Lists.Favorites;
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+
+    public class SavedTenantInfo
+    {
+        [JsonProperty(PropertyName = "tenantId")]
+        public string TenantId { get; set; }
+
+        [JsonProperty(PropertyName = "displayName")]
+        public string DisplayName { get; set; }
+    }
+
+    public class SavedUserAccount
+    {
+        [JsonProperty(PropertyName = "accountName")]
+        public string AccountName { get; set; }
+
+        [JsonProperty(PropertyName = "defaultTenantId")]
+        public string DefaultTenantId { get; set; }
+
+        [JsonProperty(PropertyName = "knownTenants")]
+        public List<SavedTenantInfo> KnownTenants { get; set; } = new List<SavedTenantInfo>();
+    }
 
     public class Settings : ApplicationSettingsBase
     {
@@ -154,7 +176,7 @@ namespace Microsoft.Vault.Explorer
 
         [UserScopedSetting]
         [DisplayName("User Account Names")]
-        [Description("Multi-line string of user account names to use in the subscriptions manager dialog.")]
+        [Description("JSON array of saved user accounts used in the subscriptions manager dialog.")]
         [Category("Subscriptions dialog")]
         [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         public string UserAccountNames
@@ -172,19 +194,19 @@ namespace Microsoft.Vault.Explorer
             set { this[nameof(this.UpgradeRequired)] = value; }
         }
 
+        [UserScopedSetting]
+        [DefaultSettingValue("")]
+        [Browsable(false)]
+        public string LastSelectedVaultAlias
+        {
+            get { return (string)this[nameof(this.LastSelectedVaultAlias)]; }
+            set { this[nameof(this.LastSelectedVaultAlias)] = value; }
+        }
+
         [Browsable(false)]
         public IEnumerable<string> UserAccountNamesList
         {
-            get
-            {
-                // Set default if empty
-                if (string.IsNullOrEmpty(this.UserAccountNames))
-                {
-                    this.UserAccountNames = string.Empty;
-                }
-
-                return from s in this.UserAccountNames.Split('\n') where !string.IsNullOrWhiteSpace(s) select s.Trim();
-            }
+            get { return this.GetSavedUserAccounts().Select(a => a.AccountName); }
         }
 
         [UserScopedSetting]
@@ -208,17 +230,267 @@ namespace Microsoft.Vault.Explorer
             base.Save();
         }
 
-        // Adds and saves new user alias in app settings.
         public bool AddUserAccountName(string userAccountName)
         {
-            if (!this.UserAccountNames.Contains(userAccountName))
+            string normalizedAccount = NormalizeAccountName(userAccountName);
+            if (string.IsNullOrWhiteSpace(normalizedAccount))
             {
-                this[nameof(this.UserAccountNames)] = this.UserAccountNames + "\n" + userAccountName;
-                base.Save();
-                return true;
+                return false;
             }
 
-            return false;
+            if (this.GetSavedUserAccounts().Any(a => string.Equals(a.AccountName, normalizedAccount, StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+
+            this.AddOrUpdateSavedUserAccount(normalizedAccount, null, null);
+            return true;
+        }
+
+        public bool AddUserAccountName(string userAccountName, string tenantId)
+        {
+            string normalizedAccount = NormalizeAccountName(userAccountName);
+            if (string.IsNullOrWhiteSpace(normalizedAccount))
+            {
+                return false;
+            }
+
+            bool existed = this.GetSavedUserAccounts().Any(a => string.Equals(a.AccountName, normalizedAccount, StringComparison.OrdinalIgnoreCase));
+            this.AddOrUpdateSavedUserAccount(normalizedAccount, tenantId, null);
+            return !existed;
+        }
+
+        public void AddOrUpdateUserAccountName(string userAccountName, string tenantId)
+        {
+            this.AddOrUpdateSavedUserAccount(userAccountName, tenantId, null);
+        }
+
+        public IReadOnlyList<SavedUserAccount> GetSavedUserAccounts()
+        {
+            return this.ParseSavedUserAccounts().AsReadOnly();
+        }
+
+        public SavedUserAccount GetSavedUserAccount(string accountName)
+        {
+            string normalizedAccount = NormalizeAccountName(accountName);
+            if (string.IsNullOrWhiteSpace(normalizedAccount))
+            {
+                return null;
+            }
+
+            return this.ParseSavedUserAccounts()
+                .FirstOrDefault(a => string.Equals(a.AccountName, normalizedAccount, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public void AddOrUpdateSavedUserAccount(string accountName, string defaultTenantId, IEnumerable<SavedTenantInfo> knownTenants)
+        {
+            string normalizedAccount = NormalizeAccountName(accountName);
+            if (string.IsNullOrWhiteSpace(normalizedAccount))
+            {
+                return;
+            }
+
+            List<SavedUserAccount> accounts = this.ParseSavedUserAccounts();
+            SavedUserAccount existing = accounts.FirstOrDefault(a => string.Equals(a.AccountName, normalizedAccount, StringComparison.OrdinalIgnoreCase));
+            if (existing == null)
+            {
+                existing = new SavedUserAccount { AccountName = normalizedAccount };
+                accounts.Add(existing);
+            }
+
+            string normalizedTenant = NormalizeTenantId(defaultTenantId);
+            if (!string.IsNullOrWhiteSpace(normalizedTenant))
+            {
+                existing.DefaultTenantId = normalizedTenant;
+            }
+
+            if (knownTenants != null)
+            {
+                foreach (SavedTenantInfo tenant in knownTenants)
+                {
+                    string tenantId = NormalizeTenantId(tenant?.TenantId);
+                    if (string.IsNullOrWhiteSpace(tenantId))
+                    {
+                        continue;
+                    }
+
+                    SavedTenantInfo existingTenant = existing.KnownTenants.FirstOrDefault(t => string.Equals(t.TenantId, tenantId, StringComparison.OrdinalIgnoreCase));
+                    if (existingTenant == null)
+                    {
+                        existing.KnownTenants.Add(new SavedTenantInfo { TenantId = tenantId, DisplayName = tenant.DisplayName?.Trim() });
+                    }
+                    else if (!string.IsNullOrWhiteSpace(tenant.DisplayName))
+                    {
+                        existingTenant.DisplayName = tenant.DisplayName.Trim();
+                    }
+                }
+            }
+
+            this.PersistSavedUserAccounts(accounts);
+        }
+
+        public void SetDefaultTenantForAccount(string accountName, string tenantId)
+        {
+            string normalizedAccount = NormalizeAccountName(accountName);
+            string normalizedTenant = NormalizeTenantId(tenantId);
+            if (string.IsNullOrWhiteSpace(normalizedAccount) || string.IsNullOrWhiteSpace(normalizedTenant))
+            {
+                return;
+            }
+
+            this.AddOrUpdateSavedUserAccount(
+                normalizedAccount,
+                normalizedTenant,
+                new[] { new SavedTenantInfo { TenantId = normalizedTenant } });
+        }
+
+        private List<SavedUserAccount> ParseSavedUserAccounts()
+        {
+            string raw = this.UserAccountNames?.Trim();
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return new List<SavedUserAccount>();
+            }
+
+            List<SavedUserAccount> fromJson = this.TryParseJsonSavedAccounts(raw);
+            if (fromJson != null)
+            {
+                return NormalizeSavedAccounts(fromJson);
+            }
+
+            return NormalizeSavedAccounts(ParseLegacyAccounts(raw));
+        }
+
+        private List<SavedUserAccount> TryParseJsonSavedAccounts(string raw)
+        {
+            if (!raw.StartsWith("[", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            try
+            {
+                JArray array = JArray.Parse(raw);
+                if (array.Count == 0)
+                {
+                    return new List<SavedUserAccount>();
+                }
+
+                if (array.First.Type == JTokenType.String)
+                {
+                    return ParseLegacyAccounts(string.Join("\n", array.Values<string>()));
+                }
+
+                return array.ToObject<List<SavedUserAccount>>() ?? new List<SavedUserAccount>();
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
+
+        private static List<SavedUserAccount> ParseLegacyAccounts(string raw)
+        {
+            var results = new List<SavedUserAccount>();
+            foreach (string line in raw.Split('\n').Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)))
+            {
+                string[] accountAndTenant = line.Split('|');
+                string accountName = NormalizeAccountName(accountAndTenant[0]);
+                if (string.IsNullOrWhiteSpace(accountName))
+                {
+                    continue;
+                }
+
+                string tenantId = accountAndTenant.Length > 1 ? NormalizeTenantId(accountAndTenant[1]) : null;
+                results.Add(new SavedUserAccount
+                {
+                    AccountName = accountName,
+                    DefaultTenantId = tenantId,
+                    KnownTenants = string.IsNullOrWhiteSpace(tenantId)
+                        ? new List<SavedTenantInfo>()
+                        : new List<SavedTenantInfo> { new SavedTenantInfo { TenantId = tenantId } },
+                });
+            }
+
+            return results;
+        }
+
+        private static List<SavedUserAccount> NormalizeSavedAccounts(List<SavedUserAccount> accounts)
+        {
+            var merged = new Dictionary<string, SavedUserAccount>(StringComparer.OrdinalIgnoreCase);
+            foreach (SavedUserAccount account in accounts ?? new List<SavedUserAccount>())
+            {
+                string accountName = NormalizeAccountName(account?.AccountName);
+                if (string.IsNullOrWhiteSpace(accountName))
+                {
+                    continue;
+                }
+
+                if (!merged.TryGetValue(accountName, out SavedUserAccount existing))
+                {
+                    existing = new SavedUserAccount
+                    {
+                        AccountName = accountName,
+                        DefaultTenantId = NormalizeTenantId(account.DefaultTenantId),
+                        KnownTenants = new List<SavedTenantInfo>(),
+                    };
+                    merged[accountName] = existing;
+                }
+
+                if (string.IsNullOrWhiteSpace(existing.DefaultTenantId))
+                {
+                    existing.DefaultTenantId = NormalizeTenantId(account.DefaultTenantId);
+                }
+
+                foreach (SavedTenantInfo tenant in account.KnownTenants ?? new List<SavedTenantInfo>())
+                {
+                    string tenantId = NormalizeTenantId(tenant?.TenantId);
+                    if (string.IsNullOrWhiteSpace(tenantId))
+                    {
+                        continue;
+                    }
+
+                    SavedTenantInfo existingTenant = existing.KnownTenants.FirstOrDefault(t => string.Equals(t.TenantId, tenantId, StringComparison.OrdinalIgnoreCase));
+                    if (existingTenant == null)
+                    {
+                        existing.KnownTenants.Add(new SavedTenantInfo { TenantId = tenantId, DisplayName = tenant.DisplayName?.Trim() });
+                    }
+                    else if (string.IsNullOrWhiteSpace(existingTenant.DisplayName) && !string.IsNullOrWhiteSpace(tenant.DisplayName))
+                    {
+                        existingTenant.DisplayName = tenant.DisplayName.Trim();
+                    }
+                }
+            }
+
+            return merged.Values.OrderBy(a => a.AccountName, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        private void PersistSavedUserAccounts(List<SavedUserAccount> accounts)
+        {
+            List<SavedUserAccount> normalized = NormalizeSavedAccounts(accounts);
+            this[nameof(this.UserAccountNames)] = JsonConvert.SerializeObject(normalized, Formatting.Indented);
+            base.Save();
+        }
+
+        private static string NormalizeAccountName(string accountName)
+        {
+            return string.IsNullOrWhiteSpace(accountName) ? null : accountName.Trim();
+        }
+
+        private static string NormalizeTenantId(string tenantId)
+        {
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                return null;
+            }
+
+            string normalized = tenantId.Trim();
+            if (normalized.Length > 128)
+            {
+                return null;
+            }
+
+            return normalized.All(c => char.IsLetterOrDigit(c) || c == '.' || c == '-') ? normalized : null;
         }
     }
 }

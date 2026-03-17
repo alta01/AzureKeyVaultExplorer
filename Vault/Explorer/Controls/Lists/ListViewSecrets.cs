@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Explorer.Controls.Lists
 {
     using System;
+    using System.ComponentModel;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -16,6 +17,7 @@ namespace Microsoft.Vault.Explorer.Controls.Lists
     {
         public const int FirstCustomColumnIndex = 4;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public int SortingColumn { get; set; }
 
         public ListViewSecrets()

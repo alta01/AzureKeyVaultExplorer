@@ -9,6 +9,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Settings
     using System.IO;
     using System.Text;
     using System.Windows.Forms;
+    using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Library;
     using Settings = Microsoft.Vault.Explorer.Settings;
     using Utils = Microsoft.Vault.Explorer.Common.Utils;
@@ -20,6 +21,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Settings
         public SettingsDialog()
         {
             this.InitializeComponent();
+            UiModernizer.Apply(this);
             this.uxPropertyGrid.SelectedObject = this._currentSettings = new Settings();
             this._currentSettings.PropertyChanged += (sender, e) => { this.uxButtonOK.Enabled = true; };
             this.uxTextBoxVersions.Text = this.FetchVersions();

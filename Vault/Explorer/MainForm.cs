@@ -56,6 +56,7 @@ namespace Microsoft.Vault.Explorer
         public MainForm()
         {
             this.InitializeComponent();
+            UiModernizer.Apply(this);
             this.ApplySettings();
 
             ToolStripManager.RenderMode = ToolStripManagerRenderMode.System;
@@ -115,6 +116,38 @@ namespace Microsoft.Vault.Explorer
         {
             base.OnShown(e);
             this.uxPropertyGridSecret.SetLabelColumnWidth(250);
+            this.TryRestoreLastVaultSelection();
+        }
+
+        private void TryRestoreLastVaultSelection()
+        {
+            if (this._activationUri != ActivationUri.Empty)
+            {
+                return;
+            }
+
+            string lastAlias = Settings.Default.LastSelectedVaultAlias;
+            if (string.IsNullOrWhiteSpace(lastAlias))
+            {
+                return;
+            }
+
+            this.uxComboBoxVaultAlias_DropDown(this, EventArgs.Empty);
+            var matchingAlias = this.uxComboBoxVaultAlias.Items
+                .Cast<object>()
+                .OfType<VaultAlias>()
+                .FirstOrDefault(v => string.Equals(v.Alias, lastAlias, StringComparison.OrdinalIgnoreCase));
+
+            if (matchingAlias == null)
+            {
+                return;
+            }
+
+            this.uxComboBoxVaultAlias.SelectedItem = matchingAlias;
+            if (this.SetCurrentVaultAlias())
+            {
+                this.uxMenuItemRefresh.PerformClick();
+            }
         }
 
         private void ApplySettings()
@@ -215,7 +248,8 @@ namespace Microsoft.Vault.Explorer
                         vault.Alias, // alias name
                         0, // Interactive authentication (default)
                         vault.DomainHint,
-                        vault.UserAlias
+                        vault.UserAlias,
+                        vault.TenantId
                     );
 
                     if (!success)
@@ -310,21 +344,33 @@ namespace Microsoft.Vault.Explorer
                             return false;
                         }
 
-                        // Add vault to temporary collection since it's new
+                        if (smd.CurrentVaultAlias == null)
+                        {
+                            this.uxComboBoxVaultAlias.SelectedItem = this.CurrentVaultAlias;
+                            return false;
+                        }
+
+                        // Add or update vault in temporary collection.
                         this._tempVaultAliases[smd.CurrentVaultAlias.Alias] = smd.CurrentVaultAlias;
-                        this.uxComboBoxVaultAlias.Items.Insert(this.uxComboBoxVaultAlias.Items.Count - 2, smd.CurrentVaultAlias);
-
-                        if (this.uxComboBoxVaultAlias.SelectedItem == null)
+                        VaultAlias existingAlias = this.uxComboBoxVaultAlias.Items
+                            .Cast<object>()
+                            .OfType<VaultAlias>()
+                            .FirstOrDefault(v => string.Equals(v.Alias, smd.CurrentVaultAlias.Alias, StringComparison.OrdinalIgnoreCase));
+                        if (existingAlias == null)
                         {
-                            this.uxComboBoxVaultAlias.SelectedItem = smd.CurrentVaultAlias;
+                            this.uxComboBoxVaultAlias.Items.Insert(this.uxComboBoxVaultAlias.Items.Count - 2, smd.CurrentVaultAlias);
+                            existingAlias = smd.CurrentVaultAlias;
+                        }
+                        else
+                        {
+                            // Keep the existing alias object in the UI list; only update auth context fields.
+                            existingAlias.UserAlias = smd.CurrentVaultAlias.UserAlias;
+                            existingAlias.DomainHint = smd.CurrentVaultAlias.DomainHint;
+                            existingAlias.TenantId = smd.CurrentVaultAlias.TenantId;
                         }
 
-                        // Set user alias and domain hint manually as they are not set from the assignment
-                        if (this.uxComboBoxVaultAlias.SelectedItem is VaultAlias selectedVault)
-                        {
-                            selectedVault.UserAlias = smd.CurrentVaultAlias.UserAlias;
-                            selectedVault.DomainHint = smd.CurrentVaultAlias.DomainHint;
-                        }
+                        // Always switch to the newly selected vault so refresh loads it immediately.
+                        this.uxComboBoxVaultAlias.SelectedItem = existingAlias;
 
                         break;
                 }
@@ -334,6 +380,7 @@ namespace Microsoft.Vault.Explorer
             if (this.uxComboBoxVaultAlias.SelectedItem is VaultAlias vaultAlias)
             {
                 this.CurrentVaultAlias = vaultAlias;
+                Settings.Default.LastSelectedVaultAlias = this.CurrentVaultAlias.Alias;
                 this.uxComboBoxVaultAlias.SelectedText = this.CurrentVaultAlias.Alias;
                 // In some cases, the combobox will be blank. Setting the text on a blank combobox will null the selected item. So, always ensure the selecteditem is set when setting the selected text.
                 this.uxComboBoxVaultAlias.SelectedItem = this.CurrentVaultAlias;
@@ -357,8 +404,8 @@ namespace Microsoft.Vault.Explorer
             if (this.CurrentVaultAlias.UserAlias != null || this.CurrentVault.VaultsConfig.Count == 0)
             {
                 this.CurrentVault.VaultsConfig[this.CurrentVaultAlias.VaultNames[0]] = new VaultAccessType(
-                    new VaultAccess[] { new VaultAccessUserInteractive(this.CurrentVaultAlias.DomainHint, this.CurrentVaultAlias.UserAlias) },
-                    new VaultAccess[] { new VaultAccessUserInteractive(this.CurrentVaultAlias.DomainHint, this.CurrentVaultAlias.UserAlias) });
+                    new VaultAccess[] { new VaultAccessUserInteractive(this.CurrentVaultAlias.DomainHint, this.CurrentVaultAlias.UserAlias, this.CurrentVaultAlias.TenantId) },
+                    new VaultAccess[] { new VaultAccessUserInteractive(this.CurrentVaultAlias.DomainHint, this.CurrentVaultAlias.UserAlias, this.CurrentVaultAlias.TenantId) });
             }
         }
 

@@ -31,6 +31,7 @@ namespace Microsoft.Vault.Explorer.Config
             int authMethod,
             string domainHint,
             string userAlias,
+            string tenantId = null,
             string clientId = null,
             string clientSecret = null,
             string certificateThumbprint = null)
@@ -41,7 +42,7 @@ namespace Microsoft.Vault.Explorer.Config
                 string vaultsFilePath = GetVaultsFilePath();
                 Dictionary<string, object> vaultsConfig = LoadVaultsConfiguration(vaultsFilePath);
 
-                var vaultAccess = CreateVaultAccessConfiguration(authMethod, domainHint, userAlias, clientId, clientSecret, certificateThumbprint);
+                var vaultAccess = CreateVaultAccessConfiguration(authMethod, domainHint, userAlias, tenantId, clientId, clientSecret, certificateThumbprint);
 
                 var vaultConfig = new Dictionary<string, object>
                 {
@@ -192,6 +193,7 @@ namespace Microsoft.Vault.Explorer.Config
             int authMethod,
             string domainHint,
             string userAlias,
+            string tenantId,
             string clientId,
             string clientSecret,
             string certificateThumbprint)
@@ -199,12 +201,18 @@ namespace Microsoft.Vault.Explorer.Config
             switch (authMethod)
             {
                 case 0: // Interactive
-                    return new Dictionary<string, object>
+                    var interactiveAccess = new Dictionary<string, object>
                     {
                         ["$type"] = "Microsoft.Vault.Library.VaultAccessUserInteractive, Microsoft.Vault.Library",
                         ["DomainHint"] = domainHint,
                         ["UserAliasType"] = userAlias,
                     };
+                    if (!string.IsNullOrWhiteSpace(tenantId))
+                    {
+                        interactiveAccess["TenantId"] = tenantId;
+                    }
+
+                    return interactiveAccess;
 
                 case 1: // Client Credential
                     return new Dictionary<string, object>

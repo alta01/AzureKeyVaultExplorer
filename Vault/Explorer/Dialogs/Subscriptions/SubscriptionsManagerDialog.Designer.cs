@@ -34,6 +34,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             System.Windows.Forms.ColumnHeader columnHeader1;
             System.Windows.Forms.ColumnHeader columnHeader2;
             System.Windows.Forms.ToolStripLabel toolStripLabel1;
+            System.Windows.Forms.ToolStripLabel toolStripLabelTenant;
             System.Windows.Forms.SplitContainer splitContainer1;
             System.Windows.Forms.SplitContainer splitContainer2;
             System.Windows.Forms.ImageList imageList1;
@@ -46,6 +47,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             this.uxButtonCancelOperation = new System.Windows.Forms.ToolStripButton();
             this.uxProgressBar = new System.Windows.Forms.ToolStripProgressBar();
             this.uxStatusLabel = new System.Windows.Forms.ToolStripLabel();
+            this.uxComboBoxTenants = new System.Windows.Forms.ToolStripComboBox();
             this.uxButtonCancel = new System.Windows.Forms.Button();
             this.uxButtonOK = new System.Windows.Forms.Button();
             uxColumnName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -53,6 +55,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
+            toolStripLabelTenant = new System.Windows.Forms.ToolStripLabel();
             splitContainer1 = new System.Windows.Forms.SplitContainer();
             splitContainer2 = new System.Windows.Forms.SplitContainer();
             imageList1 = new System.Windows.Forms.ImageList(this.components);
@@ -93,6 +96,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             toolStripLabel1.Name = "toolStripLabel1";
             toolStripLabel1.Size = new System.Drawing.Size(63, 25);
             toolStripLabel1.Text = "Account";
+            // 
+            // toolStripLabelTenant
+            // 
+            toolStripLabelTenant.Name = "toolStripLabelTenant";
+            toolStripLabelTenant.Size = new System.Drawing.Size(60, 25);
+            toolStripLabelTenant.Text = "Tenant";
             // 
             // splitContainer1
             // 
@@ -204,6 +213,8 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             toolStripLabel1,
             this.uxComboBoxAccounts,
+            toolStripLabelTenant,
+            this.uxComboBoxTenants,
             this.uxButtonCancelOperation,
             this.uxProgressBar,
             this.uxStatusLabel});
@@ -220,6 +231,15 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             this.uxComboBoxAccounts.Name = "uxComboBoxAccounts";
             this.uxComboBoxAccounts.Size = new System.Drawing.Size(351, 28);
             this.uxComboBoxAccounts.SelectedIndexChanged += new System.EventHandler(this.uxComboBoxAccounts_SelectedIndexChanged);
+            // 
+            // uxComboBoxTenants
+            // 
+            this.uxComboBoxTenants.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.uxComboBoxTenants.DropDownWidth = 320;
+            this.uxComboBoxTenants.Name = "uxComboBoxTenants";
+            this.uxComboBoxTenants.Size = new System.Drawing.Size(260, 28);
+            this.uxComboBoxTenants.ToolTipText = "Select a tenant after sign-in.";
+            this.uxComboBoxTenants.SelectedIndexChanged += new System.EventHandler(this.uxComboBoxTenants_SelectedIndexChanged);
             // 
             // uxButtonCancelOperation
             // 
@@ -319,5 +339,6 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
         private System.Windows.Forms.ToolStripButton uxButtonCancelOperation;
         private System.Windows.Forms.ToolStripLabel uxStatusLabel;
         private System.Windows.Forms.PropertyGrid uxPropertyGridVault;
+        private System.Windows.Forms.ToolStripComboBox uxComboBoxTenants;
     }
 }

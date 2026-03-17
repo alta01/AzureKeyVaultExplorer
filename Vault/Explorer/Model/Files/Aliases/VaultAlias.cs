@@ -25,6 +25,7 @@ namespace Microsoft.Vault.Explorer.Model.Files.Aliases
         public string DomainHint;
 
         public string UserAlias;
+        public string TenantId;
 
         [JsonIgnore]
         public bool IsNew { get; set; }
