@@ -18,7 +18,20 @@ Write-Output "Working directory: $workingDir"
 $msBuildPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
     -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe `
     -prerelease | Select-Object -First 1
+if ([string]::IsNullOrWhiteSpace($msBuildPath)) {
+    throw 'MSBuild was not found. Use the GitHub Actions release workflow on windows-latest.'
+}
+
+$msBuildVersionText = (& $msBuildPath -version -nologo | Select-Object -Last 1).Trim()
 Write-Output "MSBuild: $((Get-Command $msBuildPath).Path)"
+Write-Output "MSBuild version: $msBuildVersionText"
+
+$minimumSupportedVersion = [Version]'17.14.0'
+[Version]$resolvedMsBuildVersion = $null
+if (-not [Version]::TryParse($msBuildVersionText, [ref]$resolvedMsBuildVersion) -or
+    $resolvedMsBuildVersion -lt $minimumSupportedVersion) {
+    throw "MSBuild $minimumSupportedVersion+ is required for .NET 10 ClickOnce publishing. Current: '$msBuildVersionText'. Use GitHub Actions release workflow."
+}
 
 # Load current Git tag.
 $tag = $(git describe --tags)
@@ -40,15 +53,17 @@ Push-Location $projDir
 try {
     Write-Output 'Restoring:'
     dotnet restore -r win-x64
-    Write-Output 'Publishing:'
-    $msBuildVerbosityArg = '/v:m'
-    if ($env:CI) {
-        $msBuildVerbosityArg = ''
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet restore failed with exit code $LASTEXITCODE"
     }
+
+    Write-Output 'Publishing:'
     & $msBuildPath /target:publish /p:PublishProfile=ClickOnceProfile `
         /p:ApplicationVersion=$version /p:Configuration=Release `
-        /p:PublishDir=$publishDir `
-        $msBuildVerbosityArg
+        /p:PublishDir=$publishDir /v:m
+    if ($LASTEXITCODE -ne 0) {
+        throw "MSBuild publish failed with exit code $LASTEXITCODE"
+    }
 
     # Measure publish size.
     $publishSize = (Get-ChildItem -Path "$publishDir/Application Files" -Recurse |
@@ -66,8 +81,37 @@ if ($OnlyBuild) {
 # Clone `gh-pages` branch.
 $ghPagesDir = 'gh-pages'
 if (-Not (Test-Path $ghPagesDir)) {
-    git clone $(git config --get remote.origin.url) -b gh-pages `
-        --depth 1 --single-branch $ghPagesDir
+    $remoteUrl = git config --get remote.origin.url
+    $hasGhPages = $true
+    try {
+        git ls-remote --heads $remoteUrl gh-pages | Out-Null
+        $head = git ls-remote --heads $remoteUrl gh-pages
+        if ([string]::IsNullOrWhiteSpace($head)) {
+            $hasGhPages = $false
+        }
+    }
+    catch {
+        $hasGhPages = $false
+    }
+
+    if ($hasGhPages) {
+        git clone $remoteUrl -b gh-pages --depth 1 --single-branch $ghPagesDir
+    }
+    else {
+        git clone $remoteUrl $ghPagesDir
+        Push-Location $ghPagesDir
+        try {
+            git checkout --orphan gh-pages
+            git rm -rf . | Out-Null
+            Set-Content -Path index.html -Value "<html><body><h1>$appName</h1></body></html>" -Encoding UTF8
+            git add index.html
+            git commit -m "Initialize gh-pages branch"
+            git push origin gh-pages
+        }
+        finally {
+            Pop-Location
+        }
+    }
 }
 
 Push-Location $ghPagesDir
@@ -89,11 +133,15 @@ try {
     # Stage and commit.
     Write-Output 'Staging...'
     git add -A
-    Write-Output 'Committing...'
-    git commit -m "update to v$version"
-
-    # Push.
-    git push
+    $pending = git status --porcelain
+    if ([string]::IsNullOrWhiteSpace($pending)) {
+        Write-Output 'No publish changes detected; skipping commit/push.'
+    }
+    else {
+        Write-Output 'Committing...'
+        git commit -m "update to v$version"
+        git push
+    }
 } finally {
     Pop-Location
 }

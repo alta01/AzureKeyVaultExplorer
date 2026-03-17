@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Explorer.Dialogs
 {
     using System;
+    using System.ComponentModel;
     using System.Threading.Tasks;
     using System.Windows.Forms;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
@@ -16,6 +17,7 @@ namespace Microsoft.Vault.Explorer.Dialogs
         protected readonly ItemDialogBaseMode _mode;
         protected bool _changed;
         public object OriginalObject; //  Will be NULL in New mode and current value in case of Edit mode
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public PropertyObject PropertyObject { get; protected set; }
 
         public ItemDialogBase()

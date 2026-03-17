@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 {
     using System;
+    using System.Linq;
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Threading.Tasks;
@@ -23,6 +24,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
         private const string ApiVersion = "api-version=2016-07-01";
         private const string ManagmentEndpoint = "https://management.azure.com/";
         private const string AddAccountText = "Add New Account";
+        private const string SelectAccountPrompt = "Select an account or add new...";
 
         private AccountItem _currentAccountItem;
         private AuthenticationResult _currentAuthResult;
@@ -61,7 +63,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             {
                 // No pre-configured accounts, don't auto-select anything
                 this.uxComboBoxAccounts.SelectedIndex = -1;
-                this.uxComboBoxAccounts.Text = "Select an account or add new...";
+                this.uxComboBoxAccounts.Text = SelectAccountPrompt;
+                MessageBox.Show(
+                    "No saved accounts were found.\n\nSelect 'Add New Account' to sign in, then choose a subscription and vault.",
+                    "Subscriptions onboarding",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
         }
 
@@ -100,17 +107,39 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
             using (var op = this.NewUxOperationWithProgress(this.uxComboBoxAccounts))
             {
-                this._httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", this._currentAuthResult.AccessToken);
-                var hrm = await this._httpClient.GetAsync($"{ManagmentEndpoint}subscriptions?{ApiVersion}", op.CancellationToken);
-                var json = await hrm.Content.ReadAsStringAsync();
-                var subs = JsonConvert.DeserializeObject<SubscriptionsResponse>(json);
-
-                this.uxListViewSubscriptions.Items.Clear();
-                this.uxListViewVaults.Items.Clear();
-                this.uxPropertyGridVault.SelectedObject = null;
-                foreach (var s in subs.Subscriptions)
+                try
                 {
-                    this.uxListViewSubscriptions.Items.Add(new ListViewItemSubscription(s));
+                    this._httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", this._currentAuthResult.AccessToken);
+                    var hrm = await this._httpClient.GetAsync($"{ManagmentEndpoint}subscriptions?{ApiVersion}", op.CancellationToken);
+                    var json = await hrm.Content.ReadAsStringAsync();
+                    hrm.EnsureSuccessStatusCode();
+                    var subs = JsonConvert.DeserializeObject<SubscriptionsResponse>(json);
+
+                    this.uxListViewSubscriptions.Items.Clear();
+                    this.uxListViewVaults.Items.Clear();
+                    this.uxPropertyGridVault.SelectedObject = null;
+                    if (subs?.Subscriptions == null || subs.Subscriptions.Length == 0)
+                    {
+                        MessageBox.Show(
+                            "No subscriptions were found for this account.\n\nConfirm the account has access and try another account or tenant.",
+                            "No subscriptions found",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    foreach (var s in subs.Subscriptions)
+                    {
+                        this.uxListViewSubscriptions.Items.Add(new ListViewItemSubscription(s));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Failed to load subscriptions: {ex.Message}",
+                        "Subscriptions error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
                 }
             }
         }
@@ -120,6 +149,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             ListViewItemSubscription s = this.uxListViewSubscriptions.SelectedItems.Count > 0 ? (ListViewItemSubscription)this.uxListViewSubscriptions.SelectedItems[0] : null;
             if (null == s)
             {
+                return;
+            }
+
+            if (this._currentAuthResult == null)
+            {
+                MessageBox.Show("Please sign in first by selecting an account.", "Not signed in", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -179,11 +214,24 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                 // Get new user account and add it to default settings
                 string userAccountName = this._currentAuthResult.Account.Username;
                 string[] userLogin = userAccountName.Split('@');
+                if (userLogin.Length != 2)
+                {
+                    MessageBox.Show("Could not parse signed-in account name. Please sign in with a standard UPN account.", "Unsupported account format", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 this._currentAccountItem.UserAlias = userLogin[0];
                 this._currentAccountItem.DomainHint = userLogin[1];
                 if (!Settings.Default.AddUserAccountName(userAccountName))
                 {
-                    MessageBox.Show($"The user name {userAccountName} already exists.", "Username exists", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    AccountItem existing = this.uxComboBoxAccounts.Items.OfType<AccountItem>()
+                        .FirstOrDefault(a => string.Equals(a.ToString(), userAccountName, StringComparison.OrdinalIgnoreCase));
+                    if (existing != null)
+                    {
+                        this.uxComboBoxAccounts.SelectedItem = existing;
+                    }
+
+                    MessageBox.Show($"The account {userAccountName} is already configured and has been selected.", "Account already exists", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -192,12 +240,23 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
                 this.uxComboBoxAccounts.Items.Insert(0, newAccountItem);
                 this.uxComboBoxAccounts.SelectedIndex = 0;
             }
+            catch (MsalException ex)
+            {
+                MessageBox.Show(
+                    $"Authentication failed: {ex.Message}\n\nTip: close existing browser sign-in windows and try 'Add New Account' again.",
+                    "Authentication Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                // Reset selection to allow user to try again
+                this.uxComboBoxAccounts.SelectedIndex = -1;
+                this.uxComboBoxAccounts.Text = SelectAccountPrompt;
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"Authentication failed: {ex.Message}", "Authentication Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 // Reset selection to allow user to try again
                 this.uxComboBoxAccounts.SelectedIndex = -1;
-                this.uxComboBoxAccounts.Text = "Select an account or add new...";
+                this.uxComboBoxAccounts.Text = SelectAccountPrompt;
             }
         }
 

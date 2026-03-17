@@ -34,7 +34,9 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this.Data = data;
             this.Password = password;
             byte[] rawData = Convert.FromBase64String(data);
-            this.Certificate = null == password ? new X509Certificate2(rawData) : new X509Certificate2(rawData, password, X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.Exportable);
+            this.Certificate = string.IsNullOrEmpty(password)
+                ? X509CertificateLoader.LoadCertificate(rawData)
+                : X509CertificateLoader.LoadPkcs12(rawData, password, X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.Exportable, Pkcs12LoaderLimits.Defaults);
         }
 
         public CertificateValueObject(FileInfo file, string password) :

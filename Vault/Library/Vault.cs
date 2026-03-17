@@ -457,7 +457,7 @@ namespace Microsoft.Vault.Library
         public async Task<X509Certificate2> GetCertificateWithExportableKeysAsync(string certificateName, string certificateVersion = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             SecretBundle s = await this.GetSecretAsync(certificateName, certificateVersion, cancellationToken);
-            var cert = new X509Certificate2(Convert.FromBase64String(s.Value), string.Empty, X509KeyStorageFlags.Exportable);
+            var cert = X509CertificateLoader.LoadPkcs12(Convert.FromBase64String(s.Value), string.Empty, X509KeyStorageFlags.Exportable, Pkcs12LoaderLimits.Defaults);
             return cert;
         }
 

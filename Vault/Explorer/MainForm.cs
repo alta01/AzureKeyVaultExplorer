@@ -310,6 +310,17 @@ namespace Microsoft.Vault.Explorer
                             return false;
                         }
 
+                        if (smd.CurrentVaultAlias == null)
+                        {
+                            MessageBox.Show(
+                                "No vault was selected.\n\nChoose a subscription, select a vault, then click OK.",
+                                "Vault selection required",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information);
+                            this.uxComboBoxVaultAlias.SelectedItem = this.CurrentVaultAlias;
+                            return false;
+                        }
+
                         // Add vault to temporary collection since it's new
                         this._tempVaultAliases[smd.CurrentVaultAlias.Alias] = smd.CurrentVaultAlias;
                         this.uxComboBoxVaultAlias.Items.Insert(this.uxComboBoxVaultAlias.Items.Count - 2, smd.CurrentVaultAlias);

@@ -1,10 +1,12 @@
 # ![bigKey](./Screenshots/Key64x64.png) Azure Key Vault Explorer
 
-**NOTE: This is a fork of the original project located at [https://github.com/microsoft/AzureKeyVaultExplorer](https://github.com/microsoft/AzureKeyVaultExplorer). This fork is not maintained by, or affiliated with, Microsoft, and was created to allow for continued development of the tool by the community.**
+**NOTE: This repository is a fork of [reysic/AzureKeyVaultExplorer](https://github.com/reysic/AzureKeyVaultExplorer), which itself originated from [microsoft/AzureKeyVaultExplorer](https://github.com/microsoft/AzureKeyVaultExplorer). This fork is community-maintained and includes updates developed with GitHub Copilot assistance.**
 
 Azure Key Vault Explorer - be productive when working with secrets!
 
-**[Click here to install the latest version (https://reysic.github.io/AzureKeyVaultExplorer)](https://reysic.github.io/AzureKeyVaultExplorer)**
+**[Click here to install the latest version (https://alta01.github.io/AzureKeyVaultExplorer)](https://alta01.github.io/AzureKeyVaultExplorer)**
+
+If the install link does not load yet, enable **GitHub Pages** in this fork (`Settings -> Pages`) and publish from the branch that contains this repository.
 
 Original Authors: Eli Zeitlin, Gokhan Ozhan, Anna Zeitlin  
 Current Authors: [reysic](https://github.com/reysic), [softworkz](https://github.com/softworkz)  
@@ -33,11 +35,31 @@ Contact: Submit issues/PRs on this repo
 * [Contributing](#contributing)
   * [TODOs](#todos)
 
+## Alta01 Updates (using Copilot)
+
+* **Tenant selector and account flow improvements**
+  * Sign in first, then select tenant from discovered tenants before loading subscriptions.
+  * Added support for saved accounts with known tenants and selectable default tenant behavior.
+  * Reduced duplicate login prompts in common account/tenant switch flows.
+* **Subscription vault selection improvements**
+  * Better handling for "Pick vault from subscription..." and immediate vault activation after selecting a vault.
+  * Improved quick switching behavior with persisted last selected vault.
+  * Added clearer onboarding/error messages when no accounts or subscriptions are configured yet.
+* **Platform/runtime modernization**
+  * Migrated Windows projects to **.NET 10** target frameworks.
+  * Updated build compatibility for current `dotnet` tooling and maintained vulnerability-clean package baseline.
+* **Release and deployment hardening**
+  * ClickOnce release workflow is configured in `.github/workflows/release.yml` and uses `release.ps1`.
+  * Release docs are now fork-specific and include tag-driven publish steps (`release.md`).
+* **Deprecated package validation status**
+  * Deprecated package scan was re-run and confirms legacy Azure SDK packages are still present.
+  * Migration to non-deprecated Azure SDK Track 2 packages remains an open refactor backlog item.
+
 ## Key features
 
 * Best user experience for authentication, you will be prompted at most *once* to enter your credentials
 * All types of authentications are supported: Certificate, Secret and User based with 2FA (including PHX or GME)
-* One click activation, just run this: `https://reysic.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
+* One click activation, just run this: `https://alta01.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
 * Support single or dual vaults
 * Upload and download certificate (.pfx, .p12 and .cer) files
 * Import and export certificates to user or machine stores in just few clicks
@@ -68,7 +90,7 @@ Contact: Submit issues/PRs on this repo
 
 There are 4 ways how you can make Vault Explorer to work with your vaults:
 
-1. In case Vault Explorer is not installed on the box, you may just run: reysic.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
+1. In case Vault Explorer is not installed on the box, you may just run: alta01.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
 2. In case Vault Explorer already installed on the box, you can just hit Win+R type `vault://[ENTER HERE YOUR VAULT NAME]` and hit Enter
     * Note: The above two methods do **NOT** allow for alternative account login  
 3. Run Vault Explorer, open vault combo box, select last item "Pick vault from subscription..."  
@@ -95,7 +117,7 @@ Just complete the below fairly easy manual steps *once*:
 * Enter - edit item
 * Ctrl + A - select all items
 * Ctrl + C - copy item value to clipboard for some time (configurable)
-* Ctrl + Shift + C - copy link to the selected item in the following format: `https://reysic.github.io/AzureKeyVaultExplorer?vault://vaultName/collection/itemName/version`
+* Ctrl + Shift + C - copy link to the selected item in the following format: `https://alta01.github.io/AzureKeyVaultExplorer?vault://vaultName/collection/itemName/version`
 * Ctrl + D - add item to favorites / remove item from favorites
 * Ctrl + E - edit item
 * Ctrl + F - find items
@@ -301,16 +323,18 @@ Telemetry can be disabled in the Settings dialog. Set *Disable telemetry* to *Tr
 
 ### Building
 
-This project has been tested with Visual Studio 2022 and .NET Framework 4.8. To build locally:
+This fork is tested with Visual Studio 2022 and .NET 10 SDK. To build locally:
 
 * Clone this repo
-* Build and run
+* Install .NET 10 SDK (`dotnet --list-sdks` should show `10.x`)
+* Run `dotnet build AzureKeyVaultExplorer.sln`
+* Run and test the application from `Vault\Explorer`
 
 PRs are welcome!
 
 ### Publishing
 
-See [release.md](https://github.com/reysic/AzureKeyVaultExplorer/blob/c6c5153fc071ef74d306dff636df2f432d6dc27e/release.md). Following that process automatically triggers a couple of [Actions](https://github.com/reysic/AzureKeyVaultExplorer/actions), which run [release.ps1](https://github.com/reysic/AzureKeyVaultExplorer/blob/c6c5153fc071ef74d306dff636df2f432d6dc27e/release.ps1).
+See [release.md](./release.md). Following that process triggers [Actions](https://github.com/alta01/AzureKeyVaultExplorer/actions), which run [release.ps1](https://github.com/alta01/AzureKeyVaultExplorer/blob/main/release.ps1).
 
 ### TODOs
 
@@ -321,13 +345,14 @@ See [release.md](https://github.com/reysic/AzureKeyVaultExplorer/blob/c6c5153fc0
   * Microsoft.IdentityModel.Clients.ActiveDirectory
   * Microsoft.Rest.ClientRuntime
   * Microsoft.Rest.ClientRuntime.Azure
+  * Status: Validation completed; migration to non-deprecated replacements is still pending.
 * Setup ClickOnce deployment
   * Re-establish existing ClickOnce install with new URL - :white_check_mark:
   * Document release process - :white_check_mark:
   * Configure ClickOnce deployments for future releases - :white_check_mark:
 * Improve onboarding
-  * Better error messaging if user hasn't configured subscription dialog values
-* Update README.md to reflect latest  state
+  * Better error messaging if user hasn't configured subscription dialog values - :white_check_mark:
+* Update README.md to reflect latest state - :white_check_mark:
 
 #### softworkz Updates
 

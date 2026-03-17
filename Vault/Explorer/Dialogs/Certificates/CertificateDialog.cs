@@ -40,7 +40,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Certificates
             switch (contentType)
             {
                 case ContentType.Certificate:
-                    cert = new X509Certificate2(fi.FullName);
+                    cert = X509CertificateLoader.LoadCertificateFromFile(fi.FullName);
                     break;
                 case ContentType.Pkcs12:
                     string password = null;
@@ -52,12 +52,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Certificates
                     }
 
                     password = pwdDlg.Password;
-                    cert = new X509Certificate2(fi.FullName, password, X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.Exportable);
+                    cert = X509CertificateLoader.LoadPkcs12FromFile(fi.FullName, password, X509KeyStorageFlags.UserKeySet | X509KeyStorageFlags.Exportable, Pkcs12LoaderLimits.Defaults);
                     break;
                 case ContentType.KeyVaultCertificate:
                     var kvcf = Utils.LoadFromJsonFile<KeyVaultCertificateFile>(fi.FullName);
                     cb = kvcf.Deserialize();
-                    cert = new X509Certificate2(cb.Cer);
+                    cert = X509CertificateLoader.LoadCertificate(cb.Cer);
                     break;
                 default:
                     throw new ArgumentException($"Unsupported ContentType {contentType}");
