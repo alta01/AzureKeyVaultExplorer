@@ -35,6 +35,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
         private KeyVaultManagementClient _currentKeyVaultMgmtClient;
         private readonly HttpClient _httpClient;
         private bool _suppressTenantSelectionEvent;
+        private bool _showOnboardingOnLoad;
 
         public VaultAlias CurrentVaultAlias { get; private set; }
 
@@ -69,10 +70,23 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             }
             else
             {
-                // No pre-configured accounts, don't auto-select anything
+                // No pre-configured accounts — defer the onboarding prompt until after the form is shown
+                // so the form renders fully before any MessageBox appears.
                 this.uxComboBoxAccounts.SelectedIndex = -1;
                 this.uxComboBoxAccounts.Text = SelectAccountPrompt;
+                this._showOnboardingOnLoad = true;
+            }
+
+            this.Shown += this.SubscriptionsManagerDialog_Shown;
+        }
+
+        private void SubscriptionsManagerDialog_Shown(object sender, EventArgs e)
+        {
+            if (this._showOnboardingOnLoad)
+            {
+                this._showOnboardingOnLoad = false;
                 MessageBox.Show(
+                    this,
                     "No saved accounts were found.\n\nSelect 'Add New Account' to sign in, then choose a subscription and vault.",
                     "Subscriptions onboarding",
                     MessageBoxButtons.OK,
@@ -260,6 +274,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             ListViewItemSubscription s = this.uxListViewSubscriptions.SelectedItems.Count > 0 ? (ListViewItemSubscription)this.uxListViewSubscriptions.SelectedItems[0] : null;
             ListViewItemVault v = this.uxListViewVaults.SelectedItems.Count > 0 ? (ListViewItemVault)this.uxListViewVaults.SelectedItems[0] : null;
             this.uxButtonOK.Enabled = false;
+            this.CurrentVaultAlias = null;
             if (null == s || null == v)
             {
                 return;
@@ -267,16 +282,28 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
             using (var op = this.NewUxOperationWithProgress(this.uxComboBoxAccounts))
             {
-                var vault = await this._currentKeyVaultMgmtClient.Vaults.GetAsync(v.GroupName, v.Name);
-                this.uxPropertyGridVault.SelectedObject = new PropertyObjectVault(s.Subscription, v.GroupName, vault);
-                this.uxButtonOK.Enabled = true;
-
-                this.CurrentVaultAlias = new VaultAlias(v.Name, new[] { v.Name }, new[] { "Custom" })
+                try
                 {
-                    DomainHint = this._currentAccountItem.DomainHint,
-                    UserAlias = this._currentAccountItem.UserAlias,
-                    IsNew = true, // Mark as new since it's being added from SubscriptionsManagerDialog
-                };
+                    var vault = await this._currentKeyVaultMgmtClient.Vaults.GetAsync(v.GroupName, v.Name);
+                    this.uxPropertyGridVault.SelectedObject = new PropertyObjectVault(s.Subscription, v.GroupName, vault);
+                    this.CurrentVaultAlias = new VaultAlias(v.Name, new[] { v.Name }, new[] { "Custom" })
+                    {
+                        DomainHint = this._currentAccountItem.DomainHint,
+                        UserAlias = this._currentAccountItem.UserAlias,
+                        IsNew = true,
+                    };
+                    this.uxButtonOK.Enabled = true;
+                }
+                catch (Exception ex)
+                {
+                    this.uxPropertyGridVault.SelectedObject = null;
+                    MessageBox.Show(
+                        this,
+                        $"Failed to load vault details: {ex.Message}\n\nSelect a different vault or try again.",
+                        "Vault load error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
             }
         }
 

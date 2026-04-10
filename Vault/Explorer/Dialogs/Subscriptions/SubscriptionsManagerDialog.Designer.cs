@@ -301,6 +301,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.uxButtonCancel;
             this.ClientSize = new System.Drawing.Size(829, 759);
+            this.MinimumSize = new System.Drawing.Size(640, 680);
             this.Controls.Add(splitContainer1);
             this.Controls.Add(toolStrip1);
             this.Controls.Add(this.uxButtonCancel);

@@ -4,7 +4,7 @@
 
 Azure Key Vault Explorer - be productive when working with secrets!
 
-**[Click here to install the latest version (VaultExplorer.application)](https://alta01.github.io/AzureKeyVaultExplorer/VaultExplorer.application)**
+**[Click here to install the latest version (VaultExplorer.application)](https://reysic.github.io/AzureKeyVaultExplorer/VaultExplorer.application)**
 
 If the install link does not load yet, enable **GitHub Pages** in this fork (`Settings -> Pages`) and publish from the branch that contains this repository.
 
@@ -35,7 +35,7 @@ Contact: Submit issues/PRs on this repo
 * [Contributing](#contributing)
   * [TODOs](#todos)
 
-## Alta01 Updates (using Copilot)
+## Recent Updates
 
 * **Tenant selector and account flow improvements**
   * Sign in first, then select tenant from discovered tenants before loading subscriptions.
@@ -59,7 +59,7 @@ Contact: Submit issues/PRs on this repo
 
 * Best user experience for authentication, you will be prompted at most *once* to enter your credentials
 * All types of authentications are supported: Certificate, Secret and User based with 2FA (including PHX or GME)
-* One click activation, just run this: `https://alta01.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
+* One click activation, just run this: `https://reysic.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
 * Support single or dual vaults
 * Upload and download certificate (.pfx, .p12 and .cer) files
 * Import and export certificates to user or machine stores in just few clicks
@@ -90,7 +90,7 @@ Contact: Submit issues/PRs on this repo
 
 There are 4 ways how you can make Vault Explorer to work with your vaults:
 
-1. In case Vault Explorer is not installed on the box, you may just run: alta01.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
+1. In case Vault Explorer is not installed on the box, you may just run: `reysic.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
 2. In case Vault Explorer already installed on the box, you can just hit Win+R type `vault://[ENTER HERE YOUR VAULT NAME]` and hit Enter
     * Note: The above two methods do **NOT** allow for alternative account login  
 3. Run Vault Explorer, open vault combo box, select last item "Pick vault from subscription..."  
@@ -117,7 +117,7 @@ Just complete the below fairly easy manual steps *once*:
 * Enter - edit item
 * Ctrl + A - select all items
 * Ctrl + C - copy item value to clipboard for some time (configurable)
-* Ctrl + Shift + C - copy link to the selected item in the following format: `https://alta01.github.io/AzureKeyVaultExplorer?vault://vaultName/collection/itemName/version`
+* Ctrl + Shift + C - copy link to the selected item in the following format: `https://reysic.github.io/AzureKeyVaultExplorer?vault://vaultName/collection/itemName/version`
 * Ctrl + D - add item to favorites / remove item from favorites
 * Ctrl + E - edit item
 * Ctrl + F - find items
@@ -334,7 +334,7 @@ PRs are welcome!
 
 ### Publishing
 
-See [release.md](./release.md). Following that process triggers [Actions](https://github.com/alta01/AzureKeyVaultExplorer/actions), which run [release.ps1](https://github.com/alta01/AzureKeyVaultExplorer/blob/main/release.ps1).
+See [release.md](./release.md). Following that process triggers [Actions](https://github.com/reysic/AzureKeyVaultExplorer/actions), which run [release.ps1](https://github.com/reysic/AzureKeyVaultExplorer/blob/main/release.ps1).
 
 ### TODOs
 
