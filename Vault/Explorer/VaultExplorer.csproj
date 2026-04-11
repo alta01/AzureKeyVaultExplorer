@@ -28,11 +28,32 @@
 	<SelfContained>True</SelfContained>
   </PropertyGroup>
   <ItemGroup>
+    <!-- WinForms packages — will be removed in Phase 5 of Avalonia migration -->
     <PackageReference Include="fernandreu.ScintillaNET" Version="4.2.0" />
     <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.2.0" />
     <PackageReference Include="Azure.Identity" Version="1.13.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.77.1" />
     <PackageReference Include="Microsoft.Identity.Client.Desktop" Version="4.77.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Avalonia AXAML compilation — Phase 0 scaffold -->
+    <AvaloniaXaml Update="App.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <!-- Phase 3+: add Views/**/*.axaml entries here -->
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Avalonia migration packages — Phase 0 scaffold (not yet wired as entry point) -->
+    <PackageReference Include="Avalonia" Version="11.2.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.0" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.2.0" />
+    <!-- AvaloniaEdit replaces ScintillaNET in Phase 3 -->
+    <PackageReference Include="AvaloniaEdit" Version="11.1.0" />
+    <!-- Avalonia.PropertyGrid replaces WinForms PropertyGrid in Phase 3 -->
+    <PackageReference Include="Avalonia.PropertyGrid" Version="11.2.0" />
+    <!-- DynamicData for reactive list filtering in Phase 2 -->
+    <PackageReference Include="DynamicData" Version="9.0.4" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Controls\Lists\ListViewSecrets.cs">

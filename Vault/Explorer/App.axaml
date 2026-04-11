@@ -1,0 +1,11 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Microsoft.Vault.Explorer.App"
+             RequestedThemeVariant="Default">
+    <!-- Phase 0 scaffold: not yet wired as entry point (WinForms still runs the app).
+         This file will be activated in Phase 4 when Program.cs is rewritten. -->
+
+    <Application.Styles>
+        <FluentTheme />
+    </Application.Styles>
+</Application>
