@@ -11,8 +11,9 @@ namespace Microsoft.Vault.Library
     using System.Security.Cryptography.X509Certificates;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Azure.KeyVault;
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure;
+    using Azure.Security.KeyVault.Certificates;
+    using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Core;
     using Newtonsoft.Json;
 
@@ -30,21 +31,20 @@ namespace Microsoft.Vault.Library
     /// </remarks>
     public class Vault
     {
-        private readonly KeyVaultClientEx[] _keyVaultClients;
+        private readonly VaultKeyValueClient[] _keyVaultClients;
         private bool Secondary => this._keyVaultClients.Length == 2;
 
         public readonly string VaultsConfigFile;
         public readonly string[] VaultNames;
         public readonly VaultsConfig VaultsConfig;
 
-        private static readonly Task CompletedTask = Task.FromResult(0); // Dummy completed task to be used for secondary operations, in case we work with only Primary vault
+        private static readonly Task CompletedTask = Task.FromResult(0);
         private static readonly object Lock = new object();
 
         /// <summary>
         ///     UserPrincipalName, in UPN format of the currently authenticated user, in case of cert based access the value will
         ///     be: {Environment.UserDomainName}\{Environment.UserName}
-        ///     The value will be set only after successful opertaion to vault, like:
-        ///     <see cref="ListSecretsAsync(int, ListOperationProgressUpdate, CancellationToken)" />
+        ///     The value will be set only after successful operation to vault.
         /// </summary>
         public string AuthenticatedUserName { get; private set; }
 
@@ -59,9 +59,6 @@ namespace Microsoft.Vault.Library
         /// <summary>
         ///     Creates the vault management instance based on provided Vaults Config dictionary
         /// </summary>
-        /// <param name="vaultsConfig">Vaults Config dictionary</param>
-        /// <param name="accessType">ReadOnly or ReadWrite</param>
-        /// <param name="vaultNames">Single or Dual</param>
         public Vault(VaultsConfig vaultsConfig, VaultAccessTypeEnum accessType, params string[] vaultNames)
         {
             Guard.ArgumentNotNull(vaultsConfig, nameof(vaultsConfig));
@@ -71,9 +68,9 @@ namespace Microsoft.Vault.Library
             switch (this.VaultNames.Length)
             {
                 case 1:
-                    this._keyVaultClients = new []
+                    this._keyVaultClients = new[]
                     {
-                        this.CreateKeyVaultClientEx(accessType, this.VaultNames[0]),
+                        this.CreateVaultKeyValueClient(accessType, this.VaultNames[0]),
                     };
                     break;
                 case 2:
@@ -84,9 +81,10 @@ namespace Microsoft.Vault.Library
                         throw new ArgumentException($"Primary vault name {primaryVaultName} is equal to secondary vault name {secondaryVaultName}");
                     }
 
-                    this._keyVaultClients = new KeyVaultClientEx[2]
+                    this._keyVaultClients = new VaultKeyValueClient[2]
                     {
-                        this.CreateKeyVaultClientEx(accessType, primaryVaultName), this.CreateKeyVaultClientEx(accessType, secondaryVaultName),
+                        this.CreateVaultKeyValueClient(accessType, primaryVaultName),
+                        this.CreateVaultKeyValueClient(accessType, secondaryVaultName),
                     };
                     break;
                 default:
@@ -97,14 +95,6 @@ namespace Microsoft.Vault.Library
         /// <summary>
         ///     Load specified Vaults.json configuration file and creates the vault management instance
         /// </summary>
-        /// <param name="vaultsConfigFile">
-        ///     Optional path to Vaults.json file, if NULL or empty default Vaults.json will be used, in such case Vaults.json
-        ///     location will be resolved in the following order:
-        ///     1. Side-by-side with the current process location
-        ///     2. Side-by-side with the current (executing) assembly
-        /// </param>
-        /// <param name="accessType">ReadOnly or ReadWrite</param>
-        /// <param name="vaultNames">Single or Dual</param>
         public Vault(string vaultsConfigFile, VaultAccessTypeEnum accessType, params string[] vaultNames)
             : this(DeserializeVaultsConfigFromFile(ref vaultsConfigFile), accessType, vaultNames)
         {
@@ -114,8 +104,6 @@ namespace Microsoft.Vault.Library
         /// <summary>
         ///     Single (primary) vault management constructor
         /// </summary>
-        /// <param name="accessType">ReadOnly or ReadWrite</param>
-        /// <param name="vaultNames">Single or pair</param>
         public Vault(VaultAccessTypeEnum accessType, params string[] vaultNames)
             : this(string.Empty, accessType, vaultNames)
         {
@@ -124,8 +112,6 @@ namespace Microsoft.Vault.Library
         /// <summary>
         ///     Single (primary) or Dual (primary and secondary) vault management constructor
         /// </summary>
-        /// <param name="accessType">ReadOnly or ReadWrite</param>
-        /// <param name="vaultName">Vault name</param>
         public Vault(VaultAccessTypeEnum accessType, string vaultName)
             : this(accessType, new[] { vaultName })
         {
@@ -134,9 +120,6 @@ namespace Microsoft.Vault.Library
         /// <summary>
         ///     Dual (primary and secondary) vault management constructor
         /// </summary>
-        /// <param name="accessType">ReadOnly or ReadWrite</param>
-        /// <param name="primaryVaultName">Primary vault name</param>
-        /// <param name="secondaryVaultName">Secodnary vault name</param>
         public Vault(VaultAccessTypeEnum accessType, string primaryVaultName, string secondaryVaultName)
             : this(accessType, new[] { primaryVaultName, secondaryVaultName })
         {
@@ -148,11 +131,8 @@ namespace Microsoft.Vault.Library
             {
                 TypeNameHandling = TypeNameHandling.Auto,
             };
-            if (string.IsNullOrWhiteSpace(vaultsConfigFile)) // Config file was not provied, use the default one
+            if (string.IsNullOrWhiteSpace(vaultsConfigFile))
             {
-                // Vaults.json location will be resolved in the following order:
-                // 1. Side-by-side with the current process location
-                // 2. Side-by-side with the current (executing) assembly
                 vaultsConfigFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Consts.VaultsJsonConfig);
                 if (!File.Exists(vaultsConfigFile))
                 {
@@ -163,87 +143,54 @@ namespace Microsoft.Vault.Library
             return JsonConvert.DeserializeObject<VaultsConfig>(File.ReadAllText(vaultsConfigFile), settings);
         }
 
-        private KeyVaultClientEx CreateKeyVaultClientEx(VaultAccessTypeEnum accessType, string vaultName) =>
-            new KeyVaultClientEx(vaultName, async (authority, resource, scope) =>
+        private VaultKeyValueClient CreateVaultKeyValueClient(VaultAccessTypeEnum accessType, string vaultName)
+        {
+            VaultAccess[] vas;
+            string userAliasType;
+
+            lock (Lock)
             {
-                // Prepare data outside the lock
-                VaultAccess[] vas;
-                string userAliasType;
-
-                lock (Lock)
+                Utils.GuardVaultName(vaultName);
+                if (false == this.VaultsConfig.ContainsKey(vaultName))
                 {
-                    Utils.GuardVaultName(vaultName);
-                    if (false == this.VaultsConfig.ContainsKey(vaultName))
-                    {
-                        throw new KeyNotFoundException($"{vaultName} is not found in {this.VaultsConfigFile}");
-                    }
-
-                    VaultAccessType vat = this.VaultsConfig[vaultName];
-                    vas = accessType == VaultAccessTypeEnum.ReadOnly ? vat.ReadOnly : vat.ReadWrite;
-
-                    // Order possible VaultAccess options by Order property
-                    vas = vas.OrderBy(va => va.Order).ToArray();
-
-                    // Get user alias for interactive authentication
-                    userAliasType = (from va in vas where va is VaultAccessUserInteractive select (VaultAccessUserInteractive)va).FirstOrDefault()?.UserAliasType;
+                    throw new KeyNotFoundException($"{vaultName} is not found in {this.VaultsConfigFile}");
                 }
 
-                // Convert resource URL to MSAL scopes
-                string[] scopes = VaultAccess.ConvertResourceToScopes(resource);
+                VaultAccessType vat = this.VaultsConfig[vaultName];
+                vas = accessType == VaultAccessTypeEnum.ReadOnly ? vat.ReadOnly : vat.ReadWrite;
+                vas = vas.OrderBy(va => va.Order).ToArray();
+                userAliasType = (from va in vas where va is VaultAccessUserInteractive select (VaultAccessUserInteractive)va).FirstOrDefault()?.UserAliasType;
+            }
 
-                Queue<Exception> exceptions = new Queue<Exception>();
-                string vaultAccessTypes = "";
-                foreach (VaultAccess va in vas)
-                {
-                    try
-                    {
-                        // If user alias type is different from environment, force login prompt, otherwise silently login
-                        var authResult = await va.AcquireTokenAsync(scopes, userAliasType);
-
-                        if (authResult.Account == null)
-                        {
-                            // should never happen
-                            throw new VaultAccessException("The authentication result doesn't include account information");
-                        }
-
-                        this.AuthenticatedUserName = authResult.Account.Username ?? userAliasType;
-
-                        return authResult.AccessToken;
-                    }
-                    catch (Exception e)
-                    {
-                        vaultAccessTypes += $" {va}";
-                        exceptions.Enqueue(e);
-                    }
-                }
-
-                throw new VaultAccessException($"Failed to get access to {vaultName} with all possible vault access type(s){vaultAccessTypes}", exceptions.ToArray());
+            var credential = new VaultAccessTokenCredential(vas, userAliasType, vaultName, username =>
+            {
+                this.AuthenticatedUserName = username;
             });
+
+            return new VaultKeyValueClient(vaultName, credential);
+        }
 
         #endregion
 
         #region Secrets
 
         /// <summary>
-        ///     Gets specified secret by name from vault
-        ///     This function will prefer vault in the same region, in case we failed (including secret not found) it will fallback
-        ///     to other region
-        ///     In case we failed in both regions it will throw aggregated SecretException
+        ///     Gets specified secret by name from vault.
+        ///     Prefers vault in same region; falls back to other region on failure.
         /// </summary>
-        /// <param name="secretName">The name the secret in the given vault</param>
-        /// <param name="secretVersion">The version of the secret (optional)</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>SecretBundle</returns>
-        public async Task<SecretBundle> GetSecretAsync(string secretName, string secretVersion = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<KeyVaultSecret> GetSecretAsync(string secretName, string secretVersion = null, CancellationToken cancellationToken = default)
         {
             Queue<Exception> exceptions = new Queue<Exception>();
             string vaults = "";
-            secretVersion = secretVersion ?? string.Empty;
             foreach (var kv in this._keyVaultClients)
             {
                 try
                 {
-                    return await kv.GetSecretAsync(kv.VaultUri, secretName, secretVersion, cancellationToken).ConfigureAwait(false);
+                    var response = await kv.SecretClient.GetSecretAsync(
+                        secretName,
+                        string.IsNullOrEmpty(secretVersion) ? null : secretVersion,
+                        cancellationToken).ConfigureAwait(false);
+                    return response.Value;
                 }
                 catch (Exception e)
                 {
@@ -258,21 +205,21 @@ namespace Microsoft.Vault.Library
         /// <summary>
         ///     Sets a secret in both vaults
         /// </summary>
-        /// <param name="secretName">The name the secret in the given vault</param>
-        /// <param name="value">The value of the secret</param>
-        /// <param name="tags">Application-specific metadata in the form of key-value pairs</param>
-        /// <param name="contentType">Type of the secret value such as a password</param>
-        /// <param name="secretAttributes">
-        ///     Attributes for the secret. For more information on possible attributes,
-        ///     <see cref="SecretAttributes" />
-        /// </param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>A response message containing the updated secret from first vault</returns>
-        public async Task<SecretBundle> SetSecretAsync(string secretName, string value, Dictionary<string, string> tags = null, string contentType = null, SecretAttributes secretAttributes = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<KeyVaultSecret> SetSecretAsync(string secretName, string value, Dictionary<string, string> tags = null, string contentType = null, bool? enabled = null, DateTimeOffset? expires = null, DateTimeOffset? notBefore = null, CancellationToken cancellationToken = default)
         {
             tags = Utils.AddMd5ChangedBy(tags, value, this.AuthenticatedUserName);
-            var t0 = this._keyVaultClients[0].SetSecretAsync(this._keyVaultClients[0].VaultUri, secretName, value, tags, contentType, secretAttributes, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].SetSecretAsync(this._keyVaultClients[1].VaultUri, secretName, value, tags, contentType, secretAttributes, cancellationToken) : CompletedTask;
+            var secret = new KeyVaultSecret(secretName, value);
+            secret.Properties.ContentType = contentType;
+            secret.Properties.Enabled = enabled;
+            secret.Properties.ExpiresOn = expires;
+            secret.Properties.NotBefore = notBefore;
+            if (tags != null)
+            {
+                foreach (var kvp in tags) secret.Properties.Tags[kvp.Key] = kvp.Value;
+            }
+
+            var t0 = this._keyVaultClients[0].SecretClient.SetSecretAsync(secret, cancellationToken);
+            var t1 = this.Secondary ? this._keyVaultClients[1].SecretClient.SetSecretAsync(secret, cancellationToken) : Task.FromResult<Response<KeyVaultSecret>>(null);
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -290,28 +237,32 @@ namespace Microsoft.Vault.Library
                     throw new SecretException($"Failed to set secret {secretName} in vault {this._keyVaultClients[1]}", t1.Exception);
                 }
             });
-            return t0.Result;
+            return t0.Result.Value;
         }
 
         /// <summary>
-        ///     Updates the attributes associated with the specified secret in both vaults
+        ///     Updates the attributes associated with the specified secret in both vaults.
+        ///     Fetches the current version first so UpdateSecretPropertiesAsync gets a versioned URI.
         /// </summary>
-        /// <param name="secretName">The name of the secret in the given vault</param>
-        /// <param name="secretVersion">The secret version (optional)</param>
-        /// <param name="tags">Application-specific metadata in the form of key-value pairs</param>
-        /// <param name="contentType">Type of the secret value such as a password</param>
-        /// <param name="secretAttributes">
-        ///     Attributes for the secret. For more information on possible attributes,
-        ///     <see cref="SecretAttributes" />
-        /// </param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>A response message containing the updated secret from first vault</returns>
-        public async Task<SecretBundle> UpdateSecretAsync(string secretName, string secretVersion = null, Dictionary<string, string> tags = null, string contentType = null, SecretAttributes secretAttributes = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SecretProperties> UpdateSecretAsync(string secretName, string secretVersion = null, Dictionary<string, string> tags = null, string contentType = null, bool? enabled = null, DateTimeOffset? expires = null, DateTimeOffset? notBefore = null, CancellationToken cancellationToken = default)
         {
             tags = Utils.AddMd5ChangedBy(tags, null, this.AuthenticatedUserName);
-            secretVersion = secretVersion ?? string.Empty;
-            var t0 = this._keyVaultClients[0].UpdateSecretAsync(this._keyVaultClients[0].VaultUri, secretName, secretVersion, contentType, secretAttributes, tags, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].UpdateSecretAsync(this._keyVaultClients[1].VaultUri, secretName, secretVersion, contentType, secretAttributes, tags, cancellationToken) : CompletedTask;
+            string version = string.IsNullOrEmpty(secretVersion) ? null : secretVersion;
+
+            var current0 = await this._keyVaultClients[0].SecretClient.GetSecretAsync(secretName, version, cancellationToken).ConfigureAwait(false);
+            var props0 = current0.Value.Properties;
+            ApplyToSecretProperties(props0, tags, contentType, enabled, expires, notBefore);
+            var t0 = this._keyVaultClients[0].SecretClient.UpdateSecretPropertiesAsync(props0, cancellationToken);
+
+            Task<Response<SecretProperties>> t1 = Task.FromResult<Response<SecretProperties>>(null);
+            if (this.Secondary)
+            {
+                var current1 = await this._keyVaultClients[1].SecretClient.GetSecretAsync(secretName, version, cancellationToken).ConfigureAwait(false);
+                var props1 = current1.Value.Properties;
+                ApplyToSecretProperties(props1, tags, contentType, enabled, expires, notBefore);
+                t1 = this._keyVaultClients[1].SecretClient.UpdateSecretPropertiesAsync(props1, cancellationToken);
+            }
+
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -329,83 +280,52 @@ namespace Microsoft.Vault.Library
                     throw new SecretException($"Failed to update secret {secretName} in vault {this._keyVaultClients[1]}", t1.Exception);
                 }
             });
-            return t0.Result;
+            return t0.Result.Value;
+        }
+
+        private static void ApplyToSecretProperties(SecretProperties props, Dictionary<string, string> tags, string contentType, bool? enabled, DateTimeOffset? expires, DateTimeOffset? notBefore)
+        {
+            props.ContentType = contentType;
+            props.Enabled = enabled;
+            props.ExpiresOn = expires;
+            props.NotBefore = notBefore;
+            props.Tags.Clear();
+            if (tags != null)
+            {
+                foreach (var kvp in tags) props.Tags[kvp.Key] = kvp.Value;
+            }
         }
 
         /// <summary>
         ///     List all secrets from specified vault
-        ///     This function will only look in single specified Azure Key Vault. It will not fallback to other region.
         /// </summary>
-        /// <param name="regionIndex">0 - current region, 1 - other region</param>
-        /// <param name="listSecretsProgressUpdate">Optional progress update delegate</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>IEnumerable of SecretItem</returns>
-        public async Task<IEnumerable<SecretItem>> ListSecretsAsync(int regionIndex = 0, ListOperationProgressUpdate listSecretsProgressUpdate = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<SecretProperties>> ListSecretsAsync(int regionIndex = 0, ListOperationProgressUpdate listSecretsProgressUpdate = null, CancellationToken cancellationToken = default)
         {
             Guard.ArgumentIsValidRegion(regionIndex, nameof(regionIndex));
             Guard.ArgumentInRange(regionIndex, 0, this._keyVaultClients.Length - 1, nameof(regionIndex));
-            var listResponse = await this._keyVaultClients[regionIndex].GetSecretsAsync(this._keyVaultClients[regionIndex].VaultUri, Consts.ListSecretsMaxResults, cancellationToken: cancellationToken).ConfigureAwait(false);
-            Dictionary<string, SecretItem> result = new Dictionary<string, SecretItem>(StringComparer.InvariantCulture);
-            if (listResponse == null) // No secrets in the vault
+            var result = new Dictionary<string, SecretProperties>(StringComparer.InvariantCulture);
+            await foreach (var sp in this._keyVaultClients[regionIndex].SecretClient.GetPropertiesOfSecretsAsync(cancellationToken).ConfigureAwait(false))
             {
-                return result.Values;
-            }
-
-            foreach (SecretItem si in listResponse)
-            {
-                result[si.Identifier.Name] = si;
-            }
-
-            listSecretsProgressUpdate?.Invoke(result.Count);
-
-            while (!string.IsNullOrEmpty(listResponse.NextPageLink))
-            {
-                listResponse = await this._keyVaultClients[regionIndex].GetSecretsNextAsync(listResponse.NextPageLink, cancellationToken).ConfigureAwait(false);
-                foreach (SecretItem si in listResponse)
-                {
-                    result[si.Identifier.Name] = si;
-                }
-
+                result[sp.Name] = sp;
                 listSecretsProgressUpdate?.Invoke(result.Count);
             }
 
             return result.Values;
         }
 
-
         /// <summary>
         ///     List all the versions of a specified secret
-        ///     This function will only look in single specified Azure Key Vault. It will not fallback to other region.
         /// </summary>
-        /// <param name="secretName">The name of the secret in the given vault</param>
-        /// <param name="regionIndex">0 - current region, 1 - other region</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns></returns>
-        public async Task<IEnumerable<SecretItem>> GetSecretVersionsAsync(string secretName, int regionIndex = 0, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<SecretProperties>> GetSecretVersionsAsync(string secretName, int regionIndex = 0, CancellationToken cancellationToken = default)
         {
             Guard.ArgumentNotNullOrWhitespace(secretName, nameof(secretName));
             Guard.ArgumentIsValidRegion(regionIndex, nameof(regionIndex));
             Guard.ArgumentInRange(regionIndex, 0, this._keyVaultClients.Length - 1, nameof(regionIndex));
 
-            var listResponse = await this._keyVaultClients[regionIndex].GetSecretVersionsAsync(this._keyVaultClients[regionIndex].VaultUri, secretName, Consts.GetSecretVersionsMaxResults, cancellationToken: cancellationToken).ConfigureAwait(false);
-            Dictionary<string, SecretItem> result = new Dictionary<string, SecretItem>(StringComparer.InvariantCulture);
-            if (listResponse == null) // No secrets in the vault
+            var result = new Dictionary<string, SecretProperties>(StringComparer.InvariantCulture);
+            await foreach (var sp in this._keyVaultClients[regionIndex].SecretClient.GetPropertiesOfSecretVersionsAsync(secretName, cancellationToken).ConfigureAwait(false))
             {
-                return result.Values;
-            }
-
-            foreach (SecretItem si in listResponse)
-            {
-                result[si.Identifier.Identifier] = si;
-            }
-
-            while (!string.IsNullOrEmpty(listResponse.NextPageLink))
-            {
-                listResponse = await this._keyVaultClients[regionIndex].GetSecretVersionsNextAsync(listResponse.NextPageLink, cancellationToken).ConfigureAwait(false);
-                foreach (SecretItem si in listResponse)
-                {
-                    result[si.Identifier.Identifier] = si;
-                }
+                result[sp.Id.ToString()] = sp;
             }
 
             return result.Values;
@@ -414,13 +334,10 @@ namespace Microsoft.Vault.Library
         /// <summary>
         ///     Deletes a secret from both vaults
         /// </summary>
-        /// <param name="secretName">The name of the secret in the given vault</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>The deleted secret</returns>
-        public async Task<SecretBundle> DeleteSecretAsync(string secretName, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task DeleteSecretAsync(string secretName, CancellationToken cancellationToken = default)
         {
-            var t0 = this._keyVaultClients[0].DeleteSecretAsync(this._keyVaultClients[0].VaultUri, secretName, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].DeleteSecretAsync(this._keyVaultClients[1].VaultUri, secretName, cancellationToken) : CompletedTask;
+            var t0 = this._keyVaultClients[0].SecretClient.StartDeleteSecretAsync(secretName, cancellationToken);
+            var t1 = this.Secondary ? this._keyVaultClients[1].SecretClient.StartDeleteSecretAsync(secretName, cancellationToken) : Task.FromResult<DeleteSecretOperation>(null);
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -438,8 +355,6 @@ namespace Microsoft.Vault.Library
                     throw new SecretException($"Failed to delete secret {secretName} from vault {this._keyVaultClients[1]}", t1.Exception);
                 }
             });
-
-            return t0.Result;
         }
 
         #endregion
@@ -447,37 +362,31 @@ namespace Microsoft.Vault.Library
         #region Certificates
 
         /// <summary>
-        ///     Gets a certificate with private and public keys. Keys are exportable.
-        ///     Returns a certificate with non-exportable keys
+        ///     Gets a certificate with exportable private key by fetching its secret representation.
         /// </summary>
-        /// <param name="certificateName">The name of the certificate in the given vault</param>
-        /// <param name="certificateVersion">The version of the certificate (optional)</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>A response message containing the certificate with private key.</returns>
-        public async Task<X509Certificate2> GetCertificateWithExportableKeysAsync(string certificateName, string certificateVersion = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<X509Certificate2> GetCertificateWithExportableKeysAsync(string certificateName, string certificateVersion = null, CancellationToken cancellationToken = default)
         {
-            SecretBundle s = await this.GetSecretAsync(certificateName, certificateVersion, cancellationToken);
-            var cert = X509CertificateLoader.LoadPkcs12(Convert.FromBase64String(s.Value), string.Empty, X509KeyStorageFlags.Exportable, Pkcs12LoaderLimits.Defaults);
-            return cert;
+            KeyVaultSecret s = await this.GetSecretAsync(certificateName, certificateVersion, cancellationToken);
+            return X509CertificateLoader.LoadPkcs12(Convert.FromBase64String(s.Value), string.Empty, X509KeyStorageFlags.Exportable, Pkcs12LoaderLimits.Defaults);
         }
 
         /// <summary>
-        ///     Gets a certificate.
+        ///     Gets a certificate. Falls back to secondary on failure.
         /// </summary>
-        /// <param name="certificateName">The name of the certificate in the given vault</param>
-        /// <param name="certificateVersion">The version of the certificate (optional)</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>A response message containing the certificate</returns>
-        public async Task<CertificateBundle> GetCertificateAsync(string certificateName, string certificateVersion = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<KeyVaultCertificate> GetCertificateAsync(string certificateName, string certificateVersion = null, CancellationToken cancellationToken = default)
         {
             Queue<Exception> exceptions = new Queue<Exception>();
             string vaults = "";
-            certificateVersion = certificateVersion ?? string.Empty;
             foreach (var kv in this._keyVaultClients)
             {
                 try
                 {
-                    return await kv.GetCertificateAsync(kv.VaultUri, certificateName, certificateVersion, cancellationToken).ConfigureAwait(false);
+                    Response<KeyVaultCertificate> response;
+                    if (string.IsNullOrEmpty(certificateVersion))
+                        response = await kv.CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false);
+                    else
+                        response = await kv.CertificateClient.GetCertificateVersionAsync(certificateName, certificateVersion, cancellationToken).ConfigureAwait(false);
+                    return response.Value;
                 }
                 catch (Exception e)
                 {
@@ -489,41 +398,26 @@ namespace Microsoft.Vault.Library
             throw new SecretException($"Failed to get certificate {certificateName} from vault(s){vaults}", exceptions.ToArray());
         }
 
+        /// <summary>
+        ///     Gets the management policy for a certificate from the primary vault.
+        /// </summary>
+        public async Task<CertificatePolicy> GetCertificatePolicyAsync(string certificateName, CancellationToken cancellationToken = default)
+        {
+            var response = await this._keyVaultClients[0].CertificateClient.GetCertificatePolicyAsync(certificateName, cancellationToken).ConfigureAwait(false);
+            return response.Value;
+        }
 
         /// <summary>
         ///     List all certificates from specified vault
-        ///     This function will only look in single specified Azure Key Vault. It will not fallback to other region.
         /// </summary>
-        /// <param name="regionIndex">0 - current region, 1 - other region</param>
-        /// <param name="listCertificatesProgressUpdate">Optional progress update delegate</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>IEnumerable of CertificateItem</returns>
-        public async Task<IEnumerable<CertificateItem>> ListCertificatesAsync(int regionIndex = 0, ListOperationProgressUpdate listCertificatesProgressUpdate = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<CertificateProperties>> ListCertificatesAsync(int regionIndex = 0, ListOperationProgressUpdate listCertificatesProgressUpdate = null, CancellationToken cancellationToken = default)
         {
             Guard.ArgumentIsValidRegion(regionIndex, nameof(regionIndex));
             Guard.ArgumentInRange(regionIndex, 0, this._keyVaultClients.Length - 1, nameof(regionIndex));
-            var listResponse = await this._keyVaultClients[regionIndex].GetCertificatesAsync(this._keyVaultClients[regionIndex].VaultUri, Consts.ListCertificatesMaxResults, cancellationToken: cancellationToken).ConfigureAwait(false);
-            Dictionary<string, CertificateItem> result = new Dictionary<string, CertificateItem>(StringComparer.InvariantCulture);
-            if (listResponse == null) // No certificates in the vault
+            var result = new Dictionary<string, CertificateProperties>(StringComparer.InvariantCulture);
+            await foreach (var cp in this._keyVaultClients[regionIndex].CertificateClient.GetPropertiesOfCertificatesAsync(cancellationToken: cancellationToken).ConfigureAwait(false))
             {
-                return result.Values;
-            }
-
-            foreach (CertificateItem ci in listResponse)
-            {
-                result[ci.Identifier.Name] = ci;
-            }
-
-            listCertificatesProgressUpdate?.Invoke(result.Count);
-
-            while (!string.IsNullOrEmpty(listResponse.NextPageLink))
-            {
-                listResponse = await this._keyVaultClients[regionIndex].GetCertificatesNextAsync(listResponse.NextPageLink, cancellationToken).ConfigureAwait(false);
-                foreach (CertificateItem ci in listResponse)
-                {
-                    result[ci.Identifier.Name] = ci;
-                }
-
+                result[cp.Name] = cp;
                 listCertificatesProgressUpdate?.Invoke(result.Count);
             }
 
@@ -531,21 +425,26 @@ namespace Microsoft.Vault.Library
         }
 
         /// <summary>
-        ///     Imports a new certificate version. If this is the first version, the certificate resource is created.
+        ///     Imports a new certificate version into both vaults.
         /// </summary>
-        /// <param name="certificateName">The name of the certificate</param>
-        /// <param name="certificateCollection">The certificate collection with the private key</param>
-        /// <param name="certificatePolicy">The management policy for the certificate</param>
-        /// <param name="certificateAttributes">The attributes of the certificate (optional)</param>
-        /// <param name="tags">Application-specific metadata in the form of key-value pairs</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>A response message containing the imported certificate.</returns>
-        public async Task<CertificateBundle> ImportCertificateAsync(string certificateName, X509Certificate2Collection certificateCollection, CertificatePolicy certificatePolicy, CertificateAttributes certificateAttributes = null, IDictionary<string, string> tags = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<KeyVaultCertificate> ImportCertificateAsync(string certificateName, X509Certificate2Collection certificateCollection, CertificatePolicy certificatePolicy, bool? enabled = null, IDictionary<string, string> tags = null, CancellationToken cancellationToken = default)
         {
             string thumbprint = certificateCollection.FirstOrDefault()?.Thumbprint.ToLowerInvariant();
             tags = Utils.AddMd5ChangedBy(tags, thumbprint, this.AuthenticatedUserName);
-            var t0 = this._keyVaultClients[0].ImportCertificateAsync(this._keyVaultClients[0].VaultUri, certificateName, certificateCollection, certificatePolicy, certificateAttributes, tags, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].ImportCertificateAsync(this._keyVaultClients[1].VaultUri, certificateName, certificateCollection, certificatePolicy, certificateAttributes, tags, cancellationToken) : CompletedTask;
+
+            byte[] pfxBytes = certificateCollection.Export(X509ContentType.Pkcs12);
+            var options = new ImportCertificateOptions(certificateName, pfxBytes)
+            {
+                Policy = certificatePolicy,
+                Enabled = enabled,
+            };
+            if (tags != null)
+            {
+                foreach (var kvp in tags) options.Tags[kvp.Key] = kvp.Value;
+            }
+
+            var t0 = this._keyVaultClients[0].CertificateClient.ImportCertificateAsync(options, cancellationToken);
+            var t1 = this.Secondary ? this._keyVaultClients[1].CertificateClient.ImportCertificateAsync(options, cancellationToken) : Task.FromResult<Response<KeyVaultCertificate>>(null);
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -563,20 +462,16 @@ namespace Microsoft.Vault.Library
                     throw new SecretException($"Failed to import certificate {certificateName} to vault {this._keyVaultClients[1]}", t1.Exception);
                 }
             });
-
-            return t0.Result;
+            return t0.Result.Value;
         }
 
         /// <summary>
-        ///     Deletes a certificate from the specified vault.
+        ///     Deletes a certificate from both vaults.
         /// </summary>
-        /// <param name="certificateName">The name of the certificate in the given vault.</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>The deleted certificate</returns>
-        public async Task<CertificateBundle> DeleteCertificateAsync(string certificateName, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task DeleteCertificateAsync(string certificateName, CancellationToken cancellationToken = default)
         {
-            var t0 = this._keyVaultClients[0].DeleteCertificateAsync(this._keyVaultClients[0].VaultUri, certificateName, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].DeleteCertificateAsync(this._keyVaultClients[1].VaultUri, certificateName, cancellationToken) : CompletedTask;
+            var t0 = this._keyVaultClients[0].CertificateClient.StartDeleteCertificateAsync(certificateName, cancellationToken);
+            var t1 = this.Secondary ? this._keyVaultClients[1].CertificateClient.StartDeleteCertificateAsync(certificateName, cancellationToken) : Task.FromResult<DeleteCertificateOperation>(null);
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -594,26 +489,41 @@ namespace Microsoft.Vault.Library
                     throw new SecretException($"Failed to delete certificate {certificateName} from vault {this._keyVaultClients[1]}", t1.Exception);
                 }
             });
-
-            return t0.Result;
         }
 
         /// <summary>
-        ///     Updates a certificate
+        ///     Updates certificate properties in both vaults.
+        ///     Fetches the current version first so UpdateCertificatePropertiesAsync gets a versioned URI.
         /// </summary>
-        /// <param name="certificateName">The name of the certificate in the given vault.</param>
-        /// <param name="certificateVersion">The certificate version (optional)</param>
-        /// <param name="certificatePolicy">The certificate policy (optional)</param>
-        /// <param name="certificateAttributes">The attributes of the certificate (optional)</param>
-        /// <param name="tags">Application-specific metadata in the form of key-value pairs</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>A response message containing the updated certificate.</returns>
-        public async Task<CertificateBundle> UpdateCertificateAsync(string certificateName, string certificateVersion = null, CertificatePolicy certificatePolicy = null, CertificateAttributes certificateAttributes = null, IDictionary<string, string> tags = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<KeyVaultCertificate> UpdateCertificateAsync(string certificateName, string certificateVersion = null, bool? enabled = null, DateTimeOffset? expires = null, DateTimeOffset? notBefore = null, IDictionary<string, string> tags = null, CancellationToken cancellationToken = default)
         {
             tags = Utils.AddMd5ChangedBy(tags, null, this.AuthenticatedUserName);
-            certificateVersion = certificateVersion ?? string.Empty;
-            var t0 = this._keyVaultClients[0].UpdateCertificateAsync(this._keyVaultClients[0].VaultUri, certificateName, certificateVersion, certificatePolicy, certificateAttributes, tags, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].UpdateCertificateAsync(this._keyVaultClients[1].VaultUri, certificateName, certificateVersion, certificatePolicy, certificateAttributes, tags, cancellationToken) : CompletedTask;
+            string version = string.IsNullOrEmpty(certificateVersion) ? null : certificateVersion;
+
+            Response<KeyVaultCertificate> curr0;
+            if (string.IsNullOrEmpty(version))
+                curr0 = await this._keyVaultClients[0].CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false);
+            else
+                curr0 = await this._keyVaultClients[0].CertificateClient.GetCertificateVersionAsync(certificateName, version, cancellationToken).ConfigureAwait(false);
+
+            var props0 = curr0.Value.Properties;
+            ApplyToCertificateProperties(props0, tags, enabled, expires, notBefore);
+            var t0 = this._keyVaultClients[0].CertificateClient.UpdateCertificatePropertiesAsync(props0, cancellationToken);
+
+            Task<Response<KeyVaultCertificate>> t1 = Task.FromResult<Response<KeyVaultCertificate>>(null);
+            if (this.Secondary)
+            {
+                Response<KeyVaultCertificate> curr1;
+                if (string.IsNullOrEmpty(version))
+                    curr1 = await this._keyVaultClients[1].CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false);
+                else
+                    curr1 = await this._keyVaultClients[1].CertificateClient.GetCertificateVersionAsync(certificateName, version, cancellationToken).ConfigureAwait(false);
+
+                var props1 = curr1.Value.Properties;
+                ApplyToCertificateProperties(props1, tags, enabled, expires, notBefore);
+                t1 = this._keyVaultClients[1].CertificateClient.UpdateCertificatePropertiesAsync(props1, cancellationToken);
+            }
+
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -631,22 +541,28 @@ namespace Microsoft.Vault.Library
                     throw new SecretException($"Failed to update certificate {certificateName} in vault {this._keyVaultClients[1]}", t1.Exception);
                 }
             });
+            return t0.Result.Value;
+        }
 
-            return t0.Result;
+        private static void ApplyToCertificateProperties(CertificateProperties props, IDictionary<string, string> tags, bool? enabled, DateTimeOffset? expires, DateTimeOffset? notBefore)
+        {
+            props.Enabled = enabled;
+            props.ExpiresOn = expires;
+            props.NotBefore = notBefore;
+            props.Tags.Clear();
+            if (tags != null)
+            {
+                foreach (var kvp in tags) props.Tags[kvp.Key] = kvp.Value;
+            }
         }
 
         /// <summary>
-        ///     Updates the policy for a certificate. Set appropriate members in the certificatePolicy that must be updated. Leave
-        ///     others as null.
+        ///     Updates the policy for a certificate in both vaults.
         /// </summary>
-        /// <param name="certificateName">The name of the certificate in the given vault.</param>
-        /// <param name="certificatePolicy">The policy for the certificate.</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>A response message containing the updated certificate policy.</returns>
-        public async Task<CertificatePolicy> UpdateCertificatePolicyAsync(string certificateName, CertificatePolicy certificatePolicy, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<CertificatePolicy> UpdateCertificatePolicyAsync(string certificateName, CertificatePolicy certificatePolicy, CancellationToken cancellationToken = default)
         {
-            var t0 = this._keyVaultClients[0].UpdateCertificatePolicyAsync(this._keyVaultClients[0].VaultUri, certificateName, certificatePolicy, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].UpdateCertificatePolicyAsync(this._keyVaultClients[1].VaultUri, certificateName, certificatePolicy, cancellationToken) : CompletedTask;
+            var t0 = this._keyVaultClients[0].CertificateClient.UpdateCertificatePolicyAsync(certificateName, certificatePolicy, cancellationToken);
+            var t1 = this.Secondary ? this._keyVaultClients[1].CertificateClient.UpdateCertificatePolicyAsync(certificateName, certificatePolicy, cancellationToken) : Task.FromResult<Response<CertificatePolicy>>(null);
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -664,42 +580,22 @@ namespace Microsoft.Vault.Library
                     throw new SecretException($"Failed to update certificate policy for {certificateName} in vault {this._keyVaultClients[1]}", t1.Exception);
                 }
             });
-
-            return t0.Result;
+            return t0.Result.Value;
         }
 
         /// <summary>
         ///     List the versions of a certificate.
         /// </summary>
-        /// <param name="certificateName">The name of the certificate</param>
-        /// <param name="regionIndex">0 - current region, 1 - other region</param>
-        /// <param name="cancellationToken">Optional cancellation token</param>
-        /// <returns>IEnumerable of CertificateItem</returns>
-        public async Task<IEnumerable<CertificateItem>> GetCertificateVersionsAsync(string certificateName, int regionIndex = 0, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IEnumerable<CertificateProperties>> GetCertificateVersionsAsync(string certificateName, int regionIndex = 0, CancellationToken cancellationToken = default)
         {
             Guard.ArgumentNotNullOrWhitespace(certificateName, nameof(certificateName));
             Guard.ArgumentIsValidRegion(regionIndex, nameof(regionIndex));
             Guard.ArgumentInRange(regionIndex, 0, this._keyVaultClients.Length - 1, nameof(regionIndex));
 
-            var listResponse = await this._keyVaultClients[regionIndex].GetCertificateVersionsAsync(this._keyVaultClients[regionIndex].VaultUri, certificateName, Consts.GetCertificateVersionsMaxResults, cancellationToken: cancellationToken).ConfigureAwait(false);
-            Dictionary<string, CertificateItem> result = new Dictionary<string, CertificateItem>(StringComparer.InvariantCulture);
-            if (listResponse == null) // No certificates in the vault
+            var result = new Dictionary<string, CertificateProperties>(StringComparer.InvariantCulture);
+            await foreach (var cp in this._keyVaultClients[regionIndex].CertificateClient.GetPropertiesOfCertificateVersionsAsync(certificateName, cancellationToken).ConfigureAwait(false))
             {
-                return result.Values;
-            }
-
-            foreach (CertificateItem ci in listResponse)
-            {
-                result[ci.Identifier.Identifier] = ci;
-            }
-
-            while (!string.IsNullOrEmpty(listResponse.NextPageLink))
-            {
-                listResponse = await this._keyVaultClients[regionIndex].GetCertificateVersionsNextAsync(listResponse.NextPageLink, cancellationToken).ConfigureAwait(false);
-                foreach (CertificateItem ci in listResponse)
-                {
-                    result[ci.Identifier.Identifier] = ci;
-                }
+                result[cp.Id.ToString()] = cp;
             }
 
             return result.Values;

@@ -200,6 +200,14 @@ namespace Microsoft.Vault.Explorer
             this.uxButtonCopyLink = new System.Windows.Forms.ToolStripMenuItem();
             this.uxButtonSave = new System.Windows.Forms.ToolStripMenuItem();
             this.uxButtonExportToTsv = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxButtonCopyAsEnvVar = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxButtonCopyAsDockerEnv = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxButtonCopyAsK8sYaml = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxButtonCopyName = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxMenuItemCopyAsEnvVar = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxMenuItemCopyAsDockerEnv = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxMenuItemCopyAsK8sYaml = new System.Windows.Forms.ToolStripMenuItem();
+            this.uxMenuItemCopyName = new System.Windows.Forms.ToolStripMenuItem();
             this.uxButtonFavorite = new System.Windows.Forms.ToolStripButton();
             this.uxButtonSettings = new System.Windows.Forms.ToolStripButton();
             this.uxButtonHelp = new System.Windows.Forms.ToolStripButton();
@@ -222,6 +230,8 @@ namespace Microsoft.Vault.Explorer
             toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             usStatusLabelSpring = new System.Windows.Forms.ToolStripStatusLabel();
             toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
+            System.Windows.Forms.ToolStripSeparator toolStripSeparatorCopyAs1 = new System.Windows.Forms.ToolStripSeparator();
+            System.Windows.Forms.ToolStripSeparator toolStripSeparatorCopyAs2 = new System.Windows.Forms.ToolStripSeparator();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -663,7 +673,7 @@ namespace Microsoft.Vault.Explorer
             // 
             // uxMenuItemShare
             // 
-            this.uxMenuItemShare.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.uxMenuItemCopy, this.uxMenuItemCopyLink, this.uxMenuItemSave, toolStripMenuItem2, this.uxMenuItemExportToTsv });
+            this.uxMenuItemShare.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.uxMenuItemCopy, this.uxMenuItemCopyLink, this.uxMenuItemSave, toolStripMenuItem2, this.uxMenuItemExportToTsv, toolStripSeparatorCopyAs2, this.uxMenuItemCopyAsEnvVar, this.uxMenuItemCopyAsDockerEnv, this.uxMenuItemCopyAsK8sYaml, this.uxMenuItemCopyName });
             this.uxMenuItemShare.Enabled = false;
             this.uxMenuItemShare.Image = Properties.Resources.group;
             this.uxMenuItemShare.Name = "uxMenuItemShare";
@@ -712,7 +722,44 @@ namespace Microsoft.Vault.Explorer
             this.uxMenuItemExportToTsv.Text = "&Export to Tsv...";
             this.uxMenuItemExportToTsv.ToolTipText = "Export all or selected items to .tsv file";
             this.uxMenuItemExportToTsv.Click += this.uxButtonExportToTsv_Click;
-            // 
+            //
+            // uxMenuItemCopyAsEnvVar
+            //
+            this.uxMenuItemCopyAsEnvVar.Image = Properties.Resources.page_copy;
+            this.uxMenuItemCopyAsEnvVar.Name = "uxMenuItemCopyAsEnvVar";
+            this.uxMenuItemCopyAsEnvVar.Size = new System.Drawing.Size(251, 22);
+            this.uxMenuItemCopyAsEnvVar.Text = "Copy as &env var";
+            this.uxMenuItemCopyAsEnvVar.ToolTipText = "Copy as NAME=value env var";
+            this.uxMenuItemCopyAsEnvVar.Click += this.uxButtonCopyAsEnvVar_Click;
+            //
+            // uxMenuItemCopyAsDockerEnv
+            //
+            this.uxMenuItemCopyAsDockerEnv.Image = Properties.Resources.page_copy;
+            this.uxMenuItemCopyAsDockerEnv.Name = "uxMenuItemCopyAsDockerEnv";
+            this.uxMenuItemCopyAsDockerEnv.Size = new System.Drawing.Size(251, 22);
+            this.uxMenuItemCopyAsDockerEnv.Text = "Copy as &Docker --env";
+            this.uxMenuItemCopyAsDockerEnv.ToolTipText = "Copy as --env NAME=value for docker run";
+            this.uxMenuItemCopyAsDockerEnv.Click += this.uxButtonCopyAsDockerEnv_Click;
+            //
+            // uxMenuItemCopyAsK8sYaml
+            //
+            this.uxMenuItemCopyAsK8sYaml.Image = Properties.Resources.page_copy;
+            this.uxMenuItemCopyAsK8sYaml.Name = "uxMenuItemCopyAsK8sYaml";
+            this.uxMenuItemCopyAsK8sYaml.Size = new System.Drawing.Size(251, 22);
+            this.uxMenuItemCopyAsK8sYaml.Text = "Copy as &Kubernetes secret YAML";
+            this.uxMenuItemCopyAsK8sYaml.ToolTipText = "Copy as Kubernetes stringData secret YAML";
+            this.uxMenuItemCopyAsK8sYaml.Click += this.uxButtonCopyAsK8sYaml_Click;
+            //
+            // uxMenuItemCopyName
+            //
+            this.uxMenuItemCopyName.Image = Properties.Resources.page_copy;
+            this.uxMenuItemCopyName.Name = "uxMenuItemCopyName";
+            this.uxMenuItemCopyName.ShortcutKeys = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift | System.Windows.Forms.Keys.N;
+            this.uxMenuItemCopyName.Size = new System.Drawing.Size(251, 22);
+            this.uxMenuItemCopyName.Text = "Copy &name only";
+            this.uxMenuItemCopyName.ToolTipText = "Copy secret name to clipboard (no value)";
+            this.uxMenuItemCopyName.Click += this.uxButtonCopyName_Click;
+            //
             // uxMenuItemFavorite
             // 
             this.uxMenuItemFavorite.Enabled = false;
@@ -954,7 +1001,7 @@ namespace Microsoft.Vault.Explorer
             // 
             // uxButtonShare
             // 
-            this.uxButtonShare.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.uxButtonCopy, this.uxButtonCopyLink, this.uxButtonSave, toolStripMenuItem1, this.uxButtonExportToTsv });
+            this.uxButtonShare.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { this.uxButtonCopy, this.uxButtonCopyLink, this.uxButtonSave, toolStripMenuItem1, this.uxButtonExportToTsv, toolStripSeparatorCopyAs1, this.uxButtonCopyAsEnvVar, this.uxButtonCopyAsDockerEnv, this.uxButtonCopyAsK8sYaml, this.uxButtonCopyName });
             this.uxButtonShare.Enabled = false;
             this.uxButtonShare.Image = Properties.Resources.group;
             this.uxButtonShare.ImageTransparentColor = System.Drawing.Color.Magenta;
@@ -1000,7 +1047,43 @@ namespace Microsoft.Vault.Explorer
             this.uxButtonExportToTsv.Text = "&Export to Tsv...";
             this.uxButtonExportToTsv.ToolTipText = "Export all or selected items to .tsv file";
             this.uxButtonExportToTsv.Click += this.uxButtonExportToTsv_Click;
-            // 
+            //
+            // uxButtonCopyAsEnvVar
+            //
+            this.uxButtonCopyAsEnvVar.Image = Properties.Resources.page_copy;
+            this.uxButtonCopyAsEnvVar.Name = "uxButtonCopyAsEnvVar";
+            this.uxButtonCopyAsEnvVar.Size = new System.Drawing.Size(220, 22);
+            this.uxButtonCopyAsEnvVar.Text = "Copy as &env var";
+            this.uxButtonCopyAsEnvVar.ToolTipText = "Copy as NAME=value env var";
+            this.uxButtonCopyAsEnvVar.Click += this.uxButtonCopyAsEnvVar_Click;
+            //
+            // uxButtonCopyAsDockerEnv
+            //
+            this.uxButtonCopyAsDockerEnv.Image = Properties.Resources.page_copy;
+            this.uxButtonCopyAsDockerEnv.Name = "uxButtonCopyAsDockerEnv";
+            this.uxButtonCopyAsDockerEnv.Size = new System.Drawing.Size(220, 22);
+            this.uxButtonCopyAsDockerEnv.Text = "Copy as &Docker --env";
+            this.uxButtonCopyAsDockerEnv.ToolTipText = "Copy as --env NAME=value for docker run";
+            this.uxButtonCopyAsDockerEnv.Click += this.uxButtonCopyAsDockerEnv_Click;
+            //
+            // uxButtonCopyAsK8sYaml
+            //
+            this.uxButtonCopyAsK8sYaml.Image = Properties.Resources.page_copy;
+            this.uxButtonCopyAsK8sYaml.Name = "uxButtonCopyAsK8sYaml";
+            this.uxButtonCopyAsK8sYaml.Size = new System.Drawing.Size(220, 22);
+            this.uxButtonCopyAsK8sYaml.Text = "Copy as &Kubernetes secret YAML";
+            this.uxButtonCopyAsK8sYaml.ToolTipText = "Copy as Kubernetes stringData secret YAML";
+            this.uxButtonCopyAsK8sYaml.Click += this.uxButtonCopyAsK8sYaml_Click;
+            //
+            // uxButtonCopyName
+            //
+            this.uxButtonCopyName.Image = Properties.Resources.page_copy;
+            this.uxButtonCopyName.Name = "uxButtonCopyName";
+            this.uxButtonCopyName.Size = new System.Drawing.Size(220, 22);
+            this.uxButtonCopyName.Text = "Copy &name only";
+            this.uxButtonCopyName.ToolTipText = "Copy secret name to clipboard (no value)";
+            this.uxButtonCopyName.Click += this.uxButtonCopyName_Click;
+            //
             // uxButtonFavorite
             // 
             this.uxButtonFavorite.Enabled = false;
@@ -1214,6 +1297,14 @@ namespace Microsoft.Vault.Explorer
         private System.Windows.Forms.ToolStripMenuItem uxMenuItemSave;
         private System.Windows.Forms.ToolStripMenuItem uxButtonExportToTsv;
         private System.Windows.Forms.ToolStripMenuItem uxMenuItemExportToTsv;
+        private System.Windows.Forms.ToolStripMenuItem uxButtonCopyAsEnvVar;
+        private System.Windows.Forms.ToolStripMenuItem uxButtonCopyAsDockerEnv;
+        private System.Windows.Forms.ToolStripMenuItem uxButtonCopyAsK8sYaml;
+        private System.Windows.Forms.ToolStripMenuItem uxButtonCopyName;
+        private System.Windows.Forms.ToolStripMenuItem uxMenuItemCopyAsEnvVar;
+        private System.Windows.Forms.ToolStripMenuItem uxMenuItemCopyAsDockerEnv;
+        private System.Windows.Forms.ToolStripMenuItem uxMenuItemCopyAsK8sYaml;
+        private System.Windows.Forms.ToolStripMenuItem uxMenuItemCopyName;
     }
 }
 

@@ -11,7 +11,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Certificates
     using System.Security.Cryptography.X509Certificates;
     using System.Threading.Tasks;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure.Security.KeyVault.Certificates;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Dialogs.Passwords;
@@ -34,7 +34,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Certificates
         /// </summary>
         public CertificateDialog(ISession session, FileInfo fi) : this(session, "New certificate", ItemDialogBaseMode.New)
         {
-            CertificateBundle cb = null;
+            KeyVaultCertificate cb = null;
             X509Certificate2 cert = null;
             ContentType contentType = ContentTypeUtils.FromExtension(fi.Extension);
             switch (contentType)
@@ -56,8 +56,8 @@ namespace Microsoft.Vault.Explorer.Dialogs.Certificates
                     break;
                 case ContentType.KeyVaultCertificate:
                     var kvcf = Utils.LoadFromJsonFile<KeyVaultCertificateFile>(fi.FullName);
-                    cb = kvcf.Deserialize();
-                    cert = X509CertificateLoader.LoadCertificate(cb.Cer);
+                    var cfd = kvcf.Deserialize();
+                    cert = X509CertificateLoader.LoadCertificate(cfd.Cer);
                     break;
                 default:
                     throw new ArgumentException($"Unsupported ContentType {contentType}");
@@ -77,40 +77,29 @@ namespace Microsoft.Vault.Explorer.Dialogs.Certificates
         /// <summary>
         ///     Edit certificate
         /// </summary>
-        public CertificateDialog(ISession session, string name, IEnumerable<CertificateItem> versions) : this(session, $"Edit certificate {name}", ItemDialogBaseMode.Edit)
+        public CertificateDialog(ISession session, string name, IEnumerable<CertificateProperties> versions) : this(session, $"Edit certificate {name}", ItemDialogBaseMode.Edit)
         {
             this.uxTextBoxName.ReadOnly = true;
             int i = 0;
-            this.uxMenuVersions.Items.AddRange((from v in versions orderby v.Attributes.Created descending select new CertificateVersion(i++, v)).ToArray());
+            this.uxMenuVersions.Items.AddRange((from v in versions orderby v.CreatedOn descending select new CertificateVersion(i++, v)).ToArray());
             this.uxMenuVersions_ItemClicked(null, new ToolStripItemClickedEventArgs(this.uxMenuVersions.Items[0])); // Pass sender as NULL so _changed will be set to false
         }
 
-        private void NewCertificate(CertificateBundle cb, X509Certificate2 cert)
+        private void NewCertificate(KeyVaultCertificate cb, X509Certificate2 cert)
         {
-            this._certificatePolicy = cb?.Policy;
-            this._certificatePolicy = this._certificatePolicy ?? new CertificatePolicy
+            this._certificatePolicy = this._certificatePolicy ?? new CertificatePolicy("Self")
             {
-                KeyProperties = new KeyProperties
-                {
-                    Exportable = true,
-                    KeySize = 2048,
-                    KeyType = "RSA",
-                    ReuseKey = false,
-                },
-                SecretProperties = new SecretProperties
-                {
-                    ContentType = CertificateContentType.Pfx,
-                },
-            };
-            cb = cb ?? new CertificateBundle
-            {
-                Attributes = new CertificateAttributes(),
+                Exportable = true,
+                KeySize = 2048,
+                KeyType = "RSA",
+                ReuseKey = false,
+                ContentType = CertificateContentType.Pkcs12,
             };
             this.RefreshCertificateObject(cb, this._certificatePolicy, cert);
             this.uxTextBoxName.Text = Utils.ConvertToValidSecretName(cert.GetNameInfo(X509NameType.SimpleName, false));
         }
 
-        private void RefreshCertificateObject(CertificateBundle cb, CertificatePolicy cp, X509Certificate2 certificate)
+        private void RefreshCertificateObject(KeyVaultCertificate cb, CertificatePolicy cp, X509Certificate2 certificate)
         {
             this.uxPropertyGridSecret.SelectedObject = this.PropertyObject = new PropertyObjectCertificate(cb, cp, certificate, this.SecretObject_PropertyChanged);
             this.uxTextBoxName.Text = this.PropertyObject.Name;
@@ -131,11 +120,11 @@ namespace Microsoft.Vault.Explorer.Dialogs.Certificates
 
         protected override async Task<object> OnVersionChangeAsync(CustomVersion cv)
         {
-            var cb = await this._session.CurrentVault.GetCertificateAsync(cv.Id.Name, cv.Index == 0 ? null : cv.Id.Version); // Pass NULL as a version to fetch current CertificatePolicy
+            var cb = await this._session.CurrentVault.GetCertificateAsync(cv.Id.Name, cv.Index == 0 ? null : cv.Id.Version);
             var cert = await this._session.CurrentVault.GetCertificateWithExportableKeysAsync(cv.Id.Name, cv.Id.Version);
-            if (this._certificatePolicy == null && cb.Policy != null) // cb.Policy will be NULL when version is not current
+            if (this._certificatePolicy == null && cv.Index == 0) // Only fetch policy for current version
             {
-                this._certificatePolicy = cb.Policy;
+                this._certificatePolicy = await this._session.CurrentVault.GetCertificatePolicyAsync(cv.Id.Name);
             }
 
             this.RefreshCertificateObject(cb, this._certificatePolicy, cert);

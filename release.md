@@ -27,7 +27,7 @@
 3. Users install/update from:
 
    ```text
-   https://alta01.github.io/AzureKeyVaultExplorer
+   https://reysic.github.io/AzureKeyVaultExplorer
    ```
 
 ## Manual fallback

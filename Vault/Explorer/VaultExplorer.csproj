@@ -29,8 +29,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="fernandreu.ScintillaNET" Version="4.2.0" />
-    <PackageReference Include="Microsoft.Azure.Management.KeyVault" Version="3.1.0" />
-    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.24" />
+    <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.2.0" />
+    <PackageReference Include="Azure.Identity" Version="1.13.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.77.1" />
     <PackageReference Include="Microsoft.Identity.Client.Desktop" Version="4.77.1" />
   </ItemGroup>

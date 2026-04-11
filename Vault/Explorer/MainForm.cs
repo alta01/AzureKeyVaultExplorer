@@ -11,7 +11,8 @@ namespace Microsoft.Vault.Explorer
     using System.Linq;
     using System.Security.Cryptography.X509Certificates;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure.Security.KeyVault.Certificates;
+    using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Core;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Config;
@@ -40,6 +41,7 @@ namespace Microsoft.Vault.Explorer
         private bool _keyDownOccured;
         private readonly ToolStripButton uxButtonCancel;
         private readonly Dictionary<string, VaultAlias> _tempVaultAliases; // Temporary picked VaultAliases via SubscriptionsManager
+        private string _titleBase = Globals.AppName;
         private const string AddNewVaultText = "How to add new vault here...";
         private const string PickVaultText = "Pick vault from subscription...";
 
@@ -115,6 +117,35 @@ namespace Microsoft.Vault.Explorer
         {
             base.OnShown(e);
             this.uxPropertyGridSecret.SetLabelColumnWidth(250);
+            this.RestoreLastVault();
+        }
+
+        private void RestoreLastVault()
+        {
+            if (this.CurrentVaultAlias != null)
+            {
+                return; // Already set via activation URI
+            }
+
+            string lastAlias = Settings.Default.LastUsedVaultAlias;
+            if (string.IsNullOrEmpty(lastAlias))
+            {
+                return;
+            }
+
+            this.uxComboBoxVaultAlias_DropDown(this, EventArgs.Empty); // Populate items
+            VaultAlias match = this.uxComboBoxVaultAlias.Items.OfType<VaultAlias>()
+                .FirstOrDefault(v => string.Equals(v.Alias, lastAlias, StringComparison.OrdinalIgnoreCase));
+            if (match == null)
+            {
+                return;
+            }
+
+            this.uxComboBoxVaultAlias.SelectedItem = match;
+            if (this.SetCurrentVaultAlias())
+            {
+                this.uxMenuItemRefresh.PerformClick();
+            }
         }
 
         private void ApplySettings()
@@ -132,6 +163,11 @@ namespace Microsoft.Vault.Explorer
             UISettings.Default.MainFormSecretsSorting = this.uxListViewSecrets.Sorting;
             UISettings.Default.MainFormSecretsSortingColumn = this.uxListViewSecrets.SortingColumn;
             UISettings.Default.Save();
+            if (this.CurrentVaultAlias != null)
+            {
+                Settings.Default.LastUsedVaultAlias = this.CurrentVaultAlias.Alias;
+            }
+
             Settings.Default.Save();
         }
 
@@ -287,8 +323,19 @@ namespace Microsoft.Vault.Explorer
 
         private void RefreshItemsCount()
         {
-            this.uxStatusLabelSecertsCount.Text = string.IsNullOrWhiteSpace(this.uxTextBoxSearch.Text) ? $"{this.uxListViewSecrets.Items.Count} items" : $"{this.uxListViewSecrets.SearchResultsCount} out of {this.uxListViewSecrets.Items.Count} items";
+            int expiring = this.uxListViewSecrets.Items.Count > 0
+                ? this.uxListViewSecrets.Items.OfType<ListViewItemBase>().Count(i => !i.AboutToExpire)
+                : 0;
+
+            string vaultPrefix = this.CurrentVaultAlias != null ? $"{this.CurrentVaultAlias.Alias} — " : string.Empty;
+            string itemCount = string.IsNullOrWhiteSpace(this.uxTextBoxSearch.Text)
+                ? $"{this.uxListViewSecrets.Items.Count} items"
+                : $"{this.uxListViewSecrets.SearchResultsCount} out of {this.uxListViewSecrets.Items.Count} items";
+            string expiringLabel = expiring > 0 ? $" | {expiring} expiring" : string.Empty;
+
+            this.uxStatusLabelSecertsCount.Text = $"{vaultPrefix}{itemCount}{expiringLabel}";
             this.uxStatusLabelSecretsSelected.Text = $"{this.uxListViewSecrets.SelectedItems.Count} selected";
+            this.Text = expiring > 0 ? $"{this._titleBase} | {expiring} expiring" : this._titleBase;
         }
 
         private bool SetCurrentVaultAlias()
@@ -399,8 +446,8 @@ namespace Microsoft.Vault.Explorer
                     this.uxListViewSecrets.BeginUpdate();
                     int s = 0, c = 0;
                     Action updateCount = () => this.uxStatusLabelSecertsCount.Text = $"{s + c} secrets"; // We use delegate and Invoke() below to execute on the thread that owns the control
-                    IEnumerable<SecretItem> secrets = Enumerable.Empty<SecretItem>();
-                    IEnumerable<CertificateItem> certificates = Enumerable.Empty<CertificateItem>();
+                    IEnumerable<SecretProperties> secrets = Enumerable.Empty<SecretProperties>();
+                    IEnumerable<CertificateProperties> certificates = Enumerable.Empty<CertificateProperties>();
                     await op.Invoke("access",
                         async () => // List Secrets
                         {
@@ -454,7 +501,8 @@ namespace Microsoft.Vault.Explorer
                     }
                     else // We were able to list from one or from both collections
                     {
-                        this.Text += $" ({this.CurrentVault.AuthenticatedUserName})";
+                        this._titleBase = $"{Globals.AppName} ({this.CurrentVault.AuthenticatedUserName})";
+                        this.Text = this._titleBase;
                         this.uxAddSecret.Visible = this.uxAddSecret2.Visible = this.uxAddCert.Visible = this.uxAddCert2.Visible = this.uxAddFile.Visible = this.uxAddFile2.Visible = this.CurrentVaultAlias.SecretsCollectionEnabled;
                         this.uxAddKVCert.Visible = this.uxAddKVCert2.Visible = this.CurrentVaultAlias.CertificatesCollectionEnabled;
                         this.uxListViewSecrets.AllowDrop = true;
@@ -836,6 +884,61 @@ namespace Microsoft.Vault.Explorer
                 {
                     this.uxListViewSecrets.ExportToTsv(this.uxSaveFileDialog.FileName);
                 }
+            }
+        }
+
+        private async void uxButtonCopyAsEnvVar_Click(object sender, EventArgs e)
+        {
+            var item = this.uxListViewSecrets.FirstSelectedItem;
+            if (null != item)
+            {
+                using (var op = this.NewUxOperationWithProgress(this.uxButtonCopyAsEnvVar, this.uxMenuItemCopyAsEnvVar))
+                {
+                    PropertyObject po = null;
+                    await op.Invoke($"get {item.Kind} from", async () => po = await item.GetAsync(op.CancellationToken));
+                    string envName = item.Name.Replace('-', '_').ToUpperInvariant();
+                    Clipboard.SetText($"{envName}={po.Value}");
+                }
+            }
+        }
+
+        private async void uxButtonCopyAsDockerEnv_Click(object sender, EventArgs e)
+        {
+            var item = this.uxListViewSecrets.FirstSelectedItem;
+            if (null != item)
+            {
+                using (var op = this.NewUxOperationWithProgress(this.uxButtonCopyAsDockerEnv, this.uxMenuItemCopyAsDockerEnv))
+                {
+                    PropertyObject po = null;
+                    await op.Invoke($"get {item.Kind} from", async () => po = await item.GetAsync(op.CancellationToken));
+                    string envName = item.Name.Replace('-', '_').ToUpperInvariant();
+                    Clipboard.SetText($"--env {envName}={po.Value}");
+                }
+            }
+        }
+
+        private async void uxButtonCopyAsK8sYaml_Click(object sender, EventArgs e)
+        {
+            var item = this.uxListViewSecrets.FirstSelectedItem;
+            if (null != item)
+            {
+                using (var op = this.NewUxOperationWithProgress(this.uxButtonCopyAsK8sYaml, this.uxMenuItemCopyAsK8sYaml))
+                {
+                    PropertyObject po = null;
+                    await op.Invoke($"get {item.Kind} from", async () => po = await item.GetAsync(op.CancellationToken));
+                    string envName = item.Name.Replace('-', '_').ToLowerInvariant();
+                    string yaml = $"apiVersion: v1\nkind: Secret\nmetadata:\n  name: {envName}\nstringData:\n  {item.Name}: {po.Value}";
+                    Clipboard.SetText(yaml);
+                }
+            }
+        }
+
+        private void uxButtonCopyName_Click(object sender, EventArgs e)
+        {
+            var item = this.uxListViewSecrets.FirstSelectedItem;
+            if (null != item)
+            {
+                Clipboard.SetText(item.Name);
             }
         }
 

@@ -34,6 +34,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
             this.uxLinkLabelViewCertificate = new System.Windows.Forms.LinkLabel();
             this.uxPropertyGridSecret = new System.Windows.Forms.PropertyGrid();
             this.uxLabelBytesLeft = new System.Windows.Forms.Label();
+            this.uxButtonToggleMask = new System.Windows.Forms.Button();
             this.uxTimerValueTypingCompleted = new System.Windows.Forms.Timer(this.components);
             this.uxMenuNewValue = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.uxMenuItemNewPassword = new System.Windows.Forms.ToolStripMenuItem();
@@ -110,9 +111,21 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
             this.uxPropertyGridSecret.Size = new System.Drawing.Size(986, 132);
             this.uxPropertyGridSecret.TabIndex = 0;
             this.uxPropertyGridSecret.ToolbarVisible = false;
-            // 
+            //
+            // uxButtonToggleMask
+            //
+            this.uxButtonToggleMask.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
+            this.uxButtonToggleMask.Location = new System.Drawing.Point(730, 61);
+            this.uxButtonToggleMask.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.uxButtonToggleMask.Name = "uxButtonToggleMask";
+            this.uxButtonToggleMask.Size = new System.Drawing.Size(48, 22);
+            this.uxButtonToggleMask.TabIndex = 11;
+            this.uxButtonToggleMask.Text = "Hide";
+            this.uxButtonToggleMask.UseVisualStyleBackColor = true;
+            this.uxButtonToggleMask.Click += this.uxButtonToggleMask_Click;
+            //
             // uxLabelBytesLeft
-            // 
+            //
             this.uxLabelBytesLeft.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
             this.uxLabelBytesLeft.Location = new System.Drawing.Point(782, 64);
             this.uxLabelBytesLeft.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
@@ -164,6 +177,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1018, 613);
             this.Controls.Add(this.uxSplitContainer);
+            this.Controls.Add(this.uxButtonToggleMask);
             this.Controls.Add(this.uxLabelBytesLeft);
             this.Controls.Add(tableLayoutPanel1);
             this.Name = "SecretDialog";
@@ -182,6 +196,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
         private System.Windows.Forms.PropertyGrid uxPropertyGridSecret;
         private System.Windows.Forms.SplitContainer uxSplitContainer;
         private System.Windows.Forms.Label uxLabelBytesLeft;
+        private System.Windows.Forms.Button uxButtonToggleMask;
         private System.Windows.Forms.Timer uxTimerValueTypingCompleted;
         private System.Windows.Forms.ContextMenuStrip uxMenuNewValue;
         private System.Windows.Forms.ToolStripMenuItem uxMenuItemNewPassword;

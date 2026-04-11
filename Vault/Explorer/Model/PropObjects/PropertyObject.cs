@@ -11,7 +11,6 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     using System.Drawing.Design;
     using System.IO;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault;
     using Microsoft.Vault.Explorer.Controls;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Model.Collections;

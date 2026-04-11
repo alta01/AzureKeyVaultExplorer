@@ -9,8 +9,7 @@ namespace Microsoft.Vault.Explorer.Common
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault.Models;
-    using Microsoft.Rest.Azure;
+    using Azure;
     using Microsoft.Vault.Explorer.Model.Files.Aliases;
 
     /// <summary>
@@ -95,13 +94,9 @@ namespace Microsoft.Vault.Explorer.Common
                     {
                         await t();
                     }
-                    catch (CloudException ce) when (ce.Response?.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    catch (RequestFailedException rfe) when (rfe.Status == 403)
                     {
-                        exceptions.Enqueue(ce);
-                    }
-                    catch (KeyVaultErrorException kvce) when (kvce.Response?.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                    {
-                        exceptions.Enqueue(kvce);
+                        exceptions.Enqueue(rfe);
                     }
                 }));
             }

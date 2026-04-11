@@ -1,12 +1,22 @@
 namespace Microsoft.Vault.Explorer.Controls.MenuItems
 {
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure.Security.KeyVault.Secrets;
+    using Microsoft.Vault.Library;
 
     public class SecretVersion : CustomVersion
     {
-        public readonly SecretItem SecretItem;
+        public readonly SecretProperties SecretItem;
 
-        public SecretVersion(int index, SecretItem secretItem) : base(index, secretItem.Attributes.Created, secretItem.Attributes.Updated, Library.Utils.GetChangedBy(secretItem.Tags), secretItem.Identifier)
+        public SecretVersion(int index, SecretProperties secretItem) : base(
+            index,
+            secretItem.CreatedOn?.UtcDateTime,
+            secretItem.UpdatedOn?.UtcDateTime,
+            Library.Utils.GetChangedBy(secretItem.Tags),
+            new ObjectIdentifier(
+                secretItem.Name,
+                secretItem.Id?.ToString() ?? string.Empty,
+                secretItem.Version ?? string.Empty,
+                secretItem.VaultUri?.ToString() ?? string.Empty))
         {
             this.SecretItem = secretItem;
         }

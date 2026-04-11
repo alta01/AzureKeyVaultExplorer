@@ -5,8 +5,8 @@ namespace Microsoft.Vault.Explorer.Controls.MenuItems
 {
     using System;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault;
     using Microsoft.Vault.Explorer.Common;
+    using Microsoft.Vault.Library;
 
     public abstract class CustomVersion : ToolStripMenuItem
     {
