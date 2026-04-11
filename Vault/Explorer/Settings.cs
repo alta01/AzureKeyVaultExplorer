@@ -164,6 +164,15 @@ namespace Microsoft.Vault.Explorer
         }
 
         [UserScopedSetting]
+        [DefaultSettingValue("")]
+        [Browsable(false)]
+        public string LastUsedVaultAlias
+        {
+            get { return (string)this[nameof(this.LastUsedVaultAlias)]; }
+            set { this[nameof(this.LastUsedVaultAlias)] = value; }
+        }
+
+        [UserScopedSetting]
         [DefaultSettingValue("True")]
         [Browsable(false)]
         public bool UpgradeRequired

@@ -31,6 +31,8 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
     {
         private CertificateValueObject _certificateObj;
         private Scintilla uxTextBoxValue;
+        private bool _isMasked = false;
+        private string _maskedRealValue = string.Empty;
 
         private SecretDialog(ISession session, string title, ItemDialogBaseMode mode) : base(session, title, mode)
         {
@@ -300,10 +302,33 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
 
         private void uxTextBoxValue_TextChanged(object sender, EventArgs e)
         {
+            if (this._isMasked)
+            {
+                return; // Value is masked; don't write bullet characters back to PropertyObject
+            }
+
             this._changed = true;
             this.PropertyObject.Value = this.uxTextBoxValue.Text;
             this.uxTimerValueTypingCompleted.Stop(); // Wait for user to finish the typing in a text box
             this.uxTimerValueTypingCompleted.Start();
+        }
+
+        private void uxButtonToggleMask_Click(object sender, EventArgs e)
+        {
+            if (this._isMasked)
+            {
+                this._isMasked = false;
+                this.uxTextBoxValue.Text = this._maskedRealValue;
+                this._maskedRealValue = string.Empty;
+                this.uxButtonToggleMask.Text = "Hide";
+            }
+            else
+            {
+                this._maskedRealValue = this.uxTextBoxValue.Text;
+                this._isMasked = true;
+                this.uxTextBoxValue.Text = new string('*', this._maskedRealValue.Length);
+                this.uxButtonToggleMask.Text = "Show";
+            }
         }
 
         private void SecretObject_PropertyChanged(object sender, PropertyChangedEventArgs e)

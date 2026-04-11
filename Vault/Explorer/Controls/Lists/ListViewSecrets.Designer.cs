@@ -60,7 +60,7 @@ namespace Microsoft.Vault.Explorer.Controls.Lists
             // 
             // columnHeader4
             // 
-            this.columnHeader4.Text = "Expires";
+            this.columnHeader4.Text = "Expires in";
             this.columnHeader4.Width = 100;
             // 
             // uxSmallImageList
