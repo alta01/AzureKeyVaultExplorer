@@ -12,7 +12,6 @@ namespace Microsoft.Vault.Explorer.Controls.Lists
     using System.Threading;
     using System.Threading.Tasks;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Controls.Lists.Favorites;
     using Microsoft.Vault.Explorer.Model;

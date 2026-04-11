@@ -1,9 +1,9 @@
 namespace Microsoft.Vault.Explorer.Model.Collections
 {
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure.Security.KeyVault.Certificates;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
 
-    public class LifetimeActionTypeEnumConverter : CustomEnumTypeConverter<ActionType>
+    public class LifetimeActionTypeEnumConverter : CustomEnumTypeConverter<CertificatePolicyAction>
     {
     }
 }

@@ -12,7 +12,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
     using System.Security.Cryptography.X509Certificates;
     using System.Threading.Tasks;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Explorer.Controls;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Dialogs.Passwords;
@@ -27,7 +27,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
     using Settings = Microsoft.Vault.Explorer.Settings;
     using Utils = Microsoft.Vault.Explorer.Common.Utils;
 
-    public partial class SecretDialog : ItemDialogBase // <PropertyObjectSecret, SecretBundle>
+    public partial class SecretDialog : ItemDialogBase // <PropertyObjectSecret, KeyVaultSecret>
     {
         private CertificateValueObject _certificateObj;
         private Scintilla uxTextBoxValue;
@@ -63,8 +63,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
         public SecretDialog(ISession session) : this(session, "New secret", ItemDialogBaseMode.New)
         {
             this._changed = true;
-            var s = new SecretBundle { Attributes = new SecretAttributes(), ContentType = ContentTypeEnumConverter.GetDescription(ContentType.Text) };
-            this.RefreshSecretObject(s);
+            this.PropertyObject = new PropertyObjectSecret(ContentTypeEnumConverter.GetDescription(ContentType.Text), this.SecretObject_PropertyChanged);
+            this.uxPropertyGridSecret.SelectedObject = this.PropertyObject;
+            this.uxTextBoxName.Text = this.PropertyObject.Name;
+            this.uxTextBoxValue.Text = this.PropertyObject.Value;
+            var obj = (PropertyObjectSecret)this.PropertyObject;
+            this.ToggleCertificateMode(obj.ContentType.IsCertificate());
             SecretKind defaultSK = this.TryGetDefaultSecretKind();
             int defaultIndex = this.uxMenuSecretKind.Items.IndexOf(defaultSK);
             this.uxMenuSecretKind.Items[defaultIndex].PerformClick();
@@ -97,10 +101,10 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
                     break;
                 case ContentType.KeyVaultSecret:
                     var kvsf = Utils.LoadFromJsonFile<KeyVaultSecretFile>(fi.FullName);
-                    SecretBundle s = kvsf.Deserialize();
-                    this.uxPropertyGridSecret.SelectedObject = this.PropertyObject = new PropertyObjectSecret(s, this.SecretObject_PropertyChanged);
-                    this.uxTextBoxName.Text = s.SecretIdentifier?.Name;
-                    this.uxTextBoxValue.Text = s.Value;
+                    var sfd = kvsf.Deserialize();
+                    this.uxPropertyGridSecret.SelectedObject = this.PropertyObject = new PropertyObjectSecret(sfd, this.SecretObject_PropertyChanged);
+                    this.uxTextBoxName.Text = this.PropertyObject.Name;
+                    this.uxTextBoxValue.Text = this.PropertyObject.Value;
                     return;
                 default:
                     this.uxTextBoxValue.Text = File.ReadAllText(fi.FullName);
@@ -133,11 +137,11 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
         /// <summary>
         ///     Edit or Copy secret
         /// </summary>
-        public SecretDialog(ISession session, string name, IEnumerable<SecretItem> versions) : this(session, "Edit secret", ItemDialogBaseMode.Edit)
+        public SecretDialog(ISession session, string name, IEnumerable<SecretProperties> versions) : this(session, "Edit secret", ItemDialogBaseMode.Edit)
         {
             this.Text += $" {name}";
             int i = 0;
-            this.uxMenuVersions.Items.AddRange((from v in versions orderby v.Attributes.Created descending select new SecretVersion(i++, v)).ToArray());
+            this.uxMenuVersions.Items.AddRange((from v in versions orderby v.CreatedOn descending select new SecretVersion(i++, v)).ToArray());
             this.uxMenuVersions_ItemClicked(null, new ToolStripItemClickedEventArgs(this.uxMenuVersions.Items[0])); // Pass sender as NULL so _changed will be set to false
         }
 
@@ -188,7 +192,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
             return orderedValidatedSecretKinds;
         }
 
-        private void RefreshSecretObject(SecretBundle s)
+        private void RefreshSecretObject(KeyVaultSecret s)
         {
             this.PropertyObject = new PropertyObjectSecret(s, this.SecretObject_PropertyChanged);
             this.uxPropertyGridSecret.SelectedObject = this.PropertyObject;
@@ -405,7 +409,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
         protected override async Task<object> OnVersionChangeAsync(CustomVersion cv)
         {
             SecretVersion sv = (SecretVersion)cv;
-            var s = await this._session.CurrentVault.GetSecretAsync(sv.SecretItem.Identifier.Name, sv.SecretItem.Identifier.Version);
+            var s = await this._session.CurrentVault.GetSecretAsync(sv.SecretItem.Name, sv.SecretItem.Version);
             this.RefreshSecretObject(s);
             this.AutoDetectSecretKind();
             return s;

@@ -2,24 +2,24 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 {
     using System;
     using System.ComponentModel;
-    using Microsoft.Azure.Management.KeyVault.Models;
+    using Azure.ResourceManager.KeyVault;
     using Microsoft.Vault.Explorer.Model.Collections;
 
     public class PropertyObjectVault
     {
         private readonly Subscription _subscription;
         private readonly string _resourceGroupName;
-        private readonly Vault _vault;
+        private readonly KeyVaultResource _vault;
 
-        public PropertyObjectVault(Subscription s, string resourceGroupName, Vault vault)
+        public PropertyObjectVault(Subscription s, string resourceGroupName, KeyVaultResource vault)
         {
             this._subscription = s;
             this._resourceGroupName = resourceGroupName;
             this._vault = vault;
             this.Tags = new ObservableTagItemsCollection();
-            if (null != this._vault.Tags)
+            if (null != this._vault.Data.Tags)
             {
-                foreach (var kvp in this._vault.Tags)
+                foreach (var kvp in this._vault.Data.Tags)
                 {
                     this.Tags.Add(new TagItem(kvp));
                 }
@@ -27,7 +27,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
             this.AccessPolicies = new ObservableAccessPoliciesCollection();
             int i = -1;
-            foreach (var ape in this._vault.Properties.AccessPolicies)
+            foreach (var ape in this._vault.Data.Properties.AccessPolicies)
             {
                 this.AccessPolicies.Add(new AccessPolicyEntryItem(++i, ape));
             }
@@ -35,15 +35,15 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
         [DisplayName("Name")]
         [ReadOnly(true)]
-        public string Name => this._vault.Name;
+        public string Name => this._vault.Data.Name;
 
         [DisplayName("Location")]
         [ReadOnly(true)]
-        public string Location => this._vault.Location;
+        public string Location => this._vault.Data.Location.ToString();
 
         [DisplayName("Uri")]
         [ReadOnly(true)]
-        public string Uri => this._vault.Properties.VaultUri;
+        public string Uri => this._vault.Data.Properties.VaultUri?.ToString();
 
         [DisplayName("Subscription Name")]
         [ReadOnly(true)]
@@ -63,7 +63,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
         [DisplayName("Sku")]
         [ReadOnly(true)]
-        public SkuName Sku => this._vault.Properties.Sku.Name;
+        public string Sku => this._vault.Data.Properties.Sku.Name.ToString();
 
         [DisplayName("Access Policies")]
         [ReadOnly(true)]

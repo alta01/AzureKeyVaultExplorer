@@ -10,9 +10,9 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
     using System.Net.Http.Headers;
     using System.Threading.Tasks;
     using System.Windows.Forms;
-    using Microsoft.Azure.Management.KeyVault;
+    using Azure.ResourceManager;
+    using Azure.ResourceManager.KeyVault;
     using Microsoft.Identity.Client;
-    using Microsoft.Rest;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Model.Files.Aliases;
     using Microsoft.Vault.Library;
@@ -32,7 +32,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
         private AccountItem _currentAccountItem;
         private AuthenticationResult _currentAuthResult;
-        private KeyVaultManagementClient _currentKeyVaultMgmtClient;
+        private ArmClient _currentArmClient;
         private readonly HttpClient _httpClient;
         private bool _suppressTenantSelectionEvent;
         private bool _showOnboardingOnLoad;
@@ -258,11 +258,12 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
             using (var op = this.NewUxOperationWithProgress(this.uxComboBoxAccounts))
             {
-                var tvcc = new TokenCredentials(this._currentAuthResult.AccessToken);
-                this._currentKeyVaultMgmtClient = new KeyVaultManagementClient(tvcc) { SubscriptionId = s.Subscription.SubscriptionId.ToString() };
-                var vaults = await this._currentKeyVaultMgmtClient.Vaults.ListAsync(null, op.CancellationToken);
+                var cred = new StaticTokenCredential(this._currentAuthResult.AccessToken, this._currentAuthResult.ExpiresOn);
+                this._currentArmClient = new ArmClient(cred, s.Subscription.SubscriptionId.ToString());
+                var subscriptionResource = this._currentArmClient.GetSubscriptionResource(
+                    SubscriptionResource.CreateResourceIdentifier(s.Subscription.SubscriptionId.ToString()));
                 this.uxListViewVaults.Items.Clear();
-                foreach (var v in vaults)
+                await foreach (var v in subscriptionResource.GetKeyVaultsAsync(cancellationToken: op.CancellationToken))
                 {
                     this.uxListViewVaults.Items.Add(new ListViewItemVault(v));
                 }
@@ -284,7 +285,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
             {
                 try
                 {
-                    var vault = await this._currentKeyVaultMgmtClient.Vaults.GetAsync(v.GroupName, v.Name);
+                    var vault = (await v.Vault.GetAsync(op.CancellationToken)).Value;
                     this.uxPropertyGridVault.SelectedObject = new PropertyObjectVault(s.Subscription, v.GroupName, vault);
                     this.CurrentVaultAlias = new VaultAlias(v.Name, new[] { v.Name }, new[] { "Custom" })
                     {

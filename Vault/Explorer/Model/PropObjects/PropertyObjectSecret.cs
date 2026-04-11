@@ -13,7 +13,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     using System.Text;
     using System.Text.RegularExpressions;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Model.Collections;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
@@ -28,9 +28,9 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     public class PropertyObjectSecret : PropertyObject
     {
         /// <summary>
-        ///     Original secret
+        ///     Original secret (null when creating a brand-new secret)
         /// </summary>
-        private readonly SecretBundle _secret;
+        private readonly KeyVaultSecret _secret;
 
         private readonly CustomTags _customTags;
 
@@ -55,13 +55,52 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             get { return this._version; }
         }
 
-        public PropertyObjectSecret(SecretBundle secret, PropertyChangedEventHandler propertyChanged) :
-            base(secret.SecretIdentifier, secret.Tags, secret.Attributes.Enabled, secret.Attributes.Expires, secret.Attributes.NotBefore, propertyChanged)
+        /// <summary>Constructor for an existing secret fetched from vault.</summary>
+        public PropertyObjectSecret(KeyVaultSecret secret, PropertyChangedEventHandler propertyChanged) :
+            base(
+                new ObjectIdentifier(
+                    secret.Name,
+                    secret.Id?.ToString() ?? string.Empty,
+                    secret.Properties.Version ?? string.Empty,
+                    secret.Properties.VaultUri?.ToString() ?? string.Empty),
+                secret.Properties.Tags,
+                secret.Properties.Enabled,
+                secret.Properties.ExpiresOn?.UtcDateTime,
+                secret.Properties.NotBefore?.UtcDateTime,
+                propertyChanged)
         {
             this._secret = secret;
-            this._version = secret.SecretIdentifier?.Version;
-            this._contentType = ContentTypeEnumConverter.GetValue(secret.ContentType);
+            this._version = secret.Properties.Version;
+            this._contentType = ContentTypeEnumConverter.GetValue(secret.Properties.ContentType);
             this._value = this._contentType.FromRawValue(secret.Value);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+        }
+
+        /// <summary>Constructor for a secret loaded from a .kv-secret file.</summary>
+        public PropertyObjectSecret(SecretFileData fileData, PropertyChangedEventHandler propertyChanged) :
+            base(
+                fileData.ToObjectIdentifier(),
+                fileData.Tags,
+                fileData.Enabled,
+                fileData.ExpiresOn?.UtcDateTime,
+                fileData.NotBefore?.UtcDateTime,
+                propertyChanged)
+        {
+            this._secret = null;
+            this._version = fileData.ToObjectIdentifier().Version;
+            this._contentType = ContentTypeEnumConverter.GetValue(fileData.ContentType);
+            this._value = this._contentType.FromRawValue(fileData.Value);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+        }
+
+        /// <summary>Constructor for a brand-new secret (not yet in vault).</summary>
+        public PropertyObjectSecret(string contentType, PropertyChangedEventHandler propertyChanged) :
+            base(new ObjectIdentifier(null, null, null, null), null, null, null, null, propertyChanged)
+        {
+            this._secret = null;
+            this._version = null;
+            this._contentType = ContentTypeEnumConverter.GetValue(contentType);
+            this._value = null;
             this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
         }
 
@@ -182,13 +221,6 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this.Expires = default(TimeSpan) == this.SecretKind.DefaultExpiration ? null : DateTime.UtcNow.Add(this.SecretKind.DefaultExpiration);
         }
 
-        public SecretAttributes ToSecretAttributes() => new SecretAttributes
-        {
-            Enabled = this.Enabled,
-            Expires = this.Expires,
-            NotBefore = this.NotBefore,
-        };
-
         public override string GetKeyVaultFileExtension() => ContentType.KeyVaultSecret.ToExtension();
 
         public override DataObject GetClipboardValue()
@@ -204,8 +236,11 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             Directory.CreateDirectory(Path.GetDirectoryName(fullName));
             switch (ContentTypeUtils.FromExtension(Path.GetExtension(fullName)))
             {
-                case ContentType.KeyVaultSecret: // Serialize the entire secret as encrypted JSON for current user
-                    File.WriteAllText(fullName, new KeyVaultSecretFile(this._secret).Serialize());
+                case ContentType.KeyVaultSecret:
+                    if (this._secret != null)
+                    {
+                        File.WriteAllText(fullName, new KeyVaultSecretFile(SecretFileData.FromSecret(this._secret)).Serialize());
+                    }
                     break;
                 case ContentType.KeyVaultCertificate:
                     throw new InvalidOperationException("One can't save key vault secret as key vault certificate");

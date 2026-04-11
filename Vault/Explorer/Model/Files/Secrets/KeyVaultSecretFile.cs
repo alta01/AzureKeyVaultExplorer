@@ -3,20 +3,19 @@
 
 namespace Microsoft.Vault.Explorer.Model.Files.Secrets
 {
-    using Microsoft.Azure.KeyVault.Models;
     using Newtonsoft.Json;
 
     /// <summary>
     ///     Represents .kv-secret file
     /// </summary>
     [JsonObject]
-    public class KeyVaultSecretFile : KeyVaultFile<SecretBundle>
+    public class KeyVaultSecretFile : KeyVaultFile<SecretFileData>
     {
         public KeyVaultSecretFile()
         {
         }
 
-        public KeyVaultSecretFile(SecretBundle secret) : base(secret)
+        public KeyVaultSecretFile(SecretFileData data) : base(data)
         {
         }
     }

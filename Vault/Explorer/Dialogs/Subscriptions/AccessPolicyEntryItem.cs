@@ -3,16 +3,16 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
     using System;
     using System.ComponentModel;
     using System.Drawing.Design;
-    using Microsoft.Azure.Management.KeyVault.Models;
+    using Azure.ResourceManager.KeyVault.Models;
     using Newtonsoft.Json;
 
     [Editor(typeof(ExpandableObjectConverter), typeof(UITypeEditor))]
     public class AccessPolicyEntryItem
     {
         private static readonly string[] EmptyList = new string[] { };
-        private readonly AccessPolicyEntry _ape;
+        private readonly KeyVaultAccessPolicy _ape;
 
-        public AccessPolicyEntryItem(int index, AccessPolicyEntry ape)
+        public AccessPolicyEntryItem(int index, KeyVaultAccessPolicy ape)
         {
             this.Index = index;
             this._ape = ape;
@@ -28,13 +28,13 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
         public Guid ObjectId => Guid.Parse(this._ape.ObjectId);
 
         [Description("Permissions to keys")]
-        public string PermissionsToKeys => string.Join(",", this._ape.Permissions.Keys ?? EmptyList);
+        public string PermissionsToKeys => string.Join(",", this._ape.Permissions.Keys ?? (System.Collections.Generic.IList<IdentityAccessKeyPermission>)EmptyList);
 
         [Description("Permissions to secrets")]
-        public string PermissionsToSecrets => string.Join(",", this._ape.Permissions.Secrets ?? EmptyList);
+        public string PermissionsToSecrets => string.Join(",", this._ape.Permissions.Secrets ?? (System.Collections.Generic.IList<IdentityAccessSecretPermission>)EmptyList);
 
         [Description("Permissions to certificates")]
-        public string PermissionsToCertificates => string.Join(",", this._ape.Permissions.Certificates ?? EmptyList);
+        public string PermissionsToCertificates => string.Join(",", this._ape.Permissions.Certificates ?? (System.Collections.Generic.IList<IdentityAccessCertificatePermission>)EmptyList);
 
         [Description("Tenant ID of the principal")]
         public Guid TenantId => this._ape.TenantId;

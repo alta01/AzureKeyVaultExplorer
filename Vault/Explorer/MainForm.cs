@@ -11,7 +11,8 @@ namespace Microsoft.Vault.Explorer
     using System.Linq;
     using System.Security.Cryptography.X509Certificates;
     using System.Windows.Forms;
-    using Microsoft.Azure.KeyVault.Models;
+    using Azure.Security.KeyVault.Certificates;
+    using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Core;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Config;
@@ -445,8 +446,8 @@ namespace Microsoft.Vault.Explorer
                     this.uxListViewSecrets.BeginUpdate();
                     int s = 0, c = 0;
                     Action updateCount = () => this.uxStatusLabelSecertsCount.Text = $"{s + c} secrets"; // We use delegate and Invoke() below to execute on the thread that owns the control
-                    IEnumerable<SecretItem> secrets = Enumerable.Empty<SecretItem>();
-                    IEnumerable<CertificateItem> certificates = Enumerable.Empty<CertificateItem>();
+                    IEnumerable<SecretProperties> secrets = Enumerable.Empty<SecretProperties>();
+                    IEnumerable<CertificateProperties> certificates = Enumerable.Empty<CertificateProperties>();
                     await op.Invoke("access",
                         async () => // List Secrets
                         {
