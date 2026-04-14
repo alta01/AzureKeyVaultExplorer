@@ -46,7 +46,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
             // Create Default accounts based on domain hints and aliases.
             bool hasPreConfiguredAccounts = false;
-            foreach (string userAccountName in Settings.Default.UserAccountNamesList)
+            foreach (string userAccountName in AppSettings.Default.UserAccountNamesList)
             {
                 string[] accounts = userAccountName.Split('@');
                 if (accounts.Length < 2)
@@ -334,7 +334,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 
                 this._currentAccountItem.UserAlias = userAccountName;
                 this._currentAccountItem.DomainHint = string.IsNullOrWhiteSpace(this._currentAuthResult.TenantId) ? userLogin[1] : this._currentAuthResult.TenantId;
-                if (!Settings.Default.AddUserAccountName(userAccountName))
+                if (!AppSettings.Default.AddUserAccountName(userAccountName))
                 {
                     AccountItem existing = this.uxComboBoxAccounts.Items.OfType<AccountItem>()
                         .FirstOrDefault(a => string.Equals(a.ToString(), userAccountName, StringComparison.OrdinalIgnoreCase));

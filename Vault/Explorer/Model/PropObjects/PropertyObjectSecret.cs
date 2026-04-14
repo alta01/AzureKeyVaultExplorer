@@ -72,7 +72,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this._version = secret.Properties.Version;
             this._contentType = ContentTypeEnumConverter.GetValue(secret.Properties.ContentType);
             this._value = this._contentType.FromRawValue(secret.Value);
-            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(AppSettings.Default.CustomTagsJsonFileLocation, isOptional: true);
         }
 
         /// <summary>Constructor for a secret loaded from a .kv-secret file.</summary>
@@ -89,7 +89,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this._version = fileData.ToObjectIdentifier().Version;
             this._contentType = ContentTypeEnumConverter.GetValue(fileData.ContentType);
             this._value = this._contentType.FromRawValue(fileData.Value);
-            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(AppSettings.Default.CustomTagsJsonFileLocation, isOptional: true);
         }
 
         /// <summary>Constructor for a brand-new secret (not yet in vault).</summary>
@@ -100,7 +100,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this._version = null;
             this._contentType = ContentTypeEnumConverter.GetValue(contentType);
             this._value = null;
-            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(AppSettings.Default.CustomTagsJsonFileLocation, isOptional: true);
         }
 
         protected override IEnumerable<TagItem> GetValueBasedCustomTags()

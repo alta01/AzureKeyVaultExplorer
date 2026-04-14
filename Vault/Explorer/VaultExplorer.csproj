@@ -40,7 +40,28 @@
     <AvaloniaXaml Update="App.axaml">
       <Generator>MSBuild:Compile</Generator>
     </AvaloniaXaml>
-    <!-- Phase 3+: add Views/**/*.axaml entries here -->
+    <!-- Phase 3 dialog views -->
+    <AvaloniaXaml Update="Views\Dialogs\MessageDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\ExceptionDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\PasswordDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\SettingsView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\SecretDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\CertificateDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\SubscriptionsManagerView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
   </ItemGroup>
   <ItemGroup>
     <!-- Avalonia migration packages — Phase 0 scaffold (not yet wired as entry point) -->

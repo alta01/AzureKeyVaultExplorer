@@ -48,7 +48,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
             if (unknownSk.Count > 0)
             {
                 MessageBox.Show(this,
-                    $"Secret kinds '{string.Join(",", unknownSk)}' in vault alias '{this._session.CurrentVaultAlias.Alias}' are being ignored because they are not found in {Settings.Default.SecretKindsJsonFileLocation}",
+                    $"Secret kinds '{string.Join(",", unknownSk)}' in vault alias '{this._session.CurrentVaultAlias.Alias}' are being ignored because they are not found in {AppSettings.Default.SecretKindsJsonFileLocation}",
                     "Configuration Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
@@ -155,7 +155,7 @@ namespace Microsoft.Vault.Explorer.Dialogs.Secrets
 
         private static List<SecretKind> LoadSecretKinds(VaultAlias vaultAlias, out List<string> unknownSk)
         {
-            SecretKinds allSecretKinds = Utils.LoadFromJsonFile<SecretKinds>(Settings.Default.SecretKindsJsonFileLocation);
+            SecretKinds allSecretKinds = Utils.LoadFromJsonFile<SecretKinds>(AppSettings.Default.SecretKindsJsonFileLocation);
             List<SecretKind> validatedSecretKinds = new List<SecretKind>(allSecretKinds.Count) ?? new List<SecretKind>(vaultAlias.SecretKinds.Length);
             unknownSk = new List<string>();
 

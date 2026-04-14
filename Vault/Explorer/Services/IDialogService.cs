@@ -20,4 +20,7 @@ public interface IDialogService
     /// Returns true if the user confirmed before timeout, false if it timed out.
     /// </summary>
     Task<bool> ShowAutoClosingConfirmAsync(string title, string message, TimeSpan timeout);
+
+    /// <summary>Shows a password-entry dialog. Returns the entered password, or null if cancelled.</summary>
+    Task<string?> ShowPasswordDialogAsync();
 }

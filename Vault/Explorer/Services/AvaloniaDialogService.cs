@@ -1,40 +1,74 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Microsoft.Vault.Explorer.Views.Dialogs;
 
 namespace Microsoft.Vault.Explorer.Services;
 
 /// <summary>
-/// Avalonia dialog service.
-/// Phase 1: stub that uses simple message boxes.
-/// Phase 3: replace stubs with full AXAML-based dialog windows (ExceptionDialogView, etc.).
+/// Avalonia implementation of <see cref="IDialogService"/>.
+/// All dialog windows are shown modal over the main window (or as top-level if no main window).
 /// </summary>
 public sealed class AvaloniaDialogService : IDialogService
 {
-    private Window? GetMainWindow() =>
-        (Application.Current?.ApplicationLifetime
-            as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)
-            ?.MainWindow;
+    // ── Helper ────────────────────────────────────────────────────────────────
+
+    private static Window? GetMainWindow() =>
+        (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)
+        ?.MainWindow;
+
+    private static Task<TResult> ShowAsync<TResult>(Window dialog)
+    {
+        var owner = GetMainWindow();
+        return owner != null
+            ? dialog.ShowDialog<TResult>(owner)
+            : dialog.ShowDialog<TResult>(new Window()); // fallback (should not normally happen)
+    }
+
+    // ── IDialogService ────────────────────────────────────────────────────────
 
     public Task ShowMessageAsync(string title, string message)
     {
-        // TODO Phase 3: open MessageDialogView.axaml
-        return Task.CompletedTask;
+        var dlg = MessageDialogView.Create(title, message, MessageDialogKind.Info);
+        return ShowAsync<object?>(dlg);
     }
 
     public Task ShowErrorAsync(string title, string message, Exception? ex = null)
     {
-        // TODO Phase 3: open ExceptionDialogView.axaml
-        return Task.CompletedTask;
+        if (ex != null)
+        {
+            var dlg = new ExceptionDialogView(ex);
+            dlg.Title = title;
+            return ShowAsync<object?>(dlg);
+        }
+        else
+        {
+            var dlg = MessageDialogView.Create(title, message, MessageDialogKind.Error);
+            return ShowAsync<object?>(dlg);
+        }
     }
 
-    public Task<bool> ShowConfirmAsync(string title, string message)
+    public async Task<bool> ShowConfirmAsync(string title, string message)
     {
-        // TODO Phase 3: open ConfirmDialogView.axaml
-        return Task.FromResult(true);
+        var dlg = MessageDialogView.Create(title, message, MessageDialogKind.Confirm);
+        var result = await ShowAsync<bool>(dlg);
+        return result;
     }
 
-    public Task<bool> ShowAutoClosingConfirmAsync(string title, string message, TimeSpan timeout)
+    public async Task<bool> ShowAutoClosingConfirmAsync(string title, string message, TimeSpan timeout)
     {
-        // TODO Phase 3: open a timed confirmation dialog with DispatcherTimer countdown.
-        return Task.FromResult(true);
+        var dlg = MessageDialogView.Create(title, message, MessageDialogKind.Confirm, timeout);
+        var result = await ShowAsync<bool>(dlg);
+        return result;
+    }
+
+    // ── Password helper (used by SecretDialogViewModel and CertificateDialogViewModel) ─
+
+    public async Task<string?> ShowPasswordDialogAsync()
+    {
+        var dlg = new PasswordDialogView();
+        return await ShowAsync<string?>(dlg);
     }
 }

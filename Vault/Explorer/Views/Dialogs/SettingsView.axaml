@@ -1,0 +1,85 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Microsoft.Vault.Explorer.ViewModels"
+        xmlns:pgc="using:Avalonia.PropertyGrid.Controls"
+        x:Class="Microsoft.Vault.Explorer.Views.Dialogs.SettingsView"
+        x:DataType="vm:SettingsViewModel"
+        Title="Settings"
+        Width="760" Height="600"
+        MinWidth="600" MinHeight="400"
+        WindowStartupLocation="CenterOwner">
+
+  <DockPanel Margin="12">
+
+    <!-- Bottom buttons -->
+    <StackPanel DockPanel.Dock="Bottom"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="8"
+                Margin="0,8,0,0">
+      <Button Content="OK"
+              IsDefault="True"
+              Width="80"
+              Command="{Binding SaveCommand}"
+              Click="OkButton_Click"/>
+      <Button Content="Cancel"
+              Width="80"
+              IsCancel="True"
+              Click="CancelButton_Click"/>
+    </StackPanel>
+
+    <!-- Tab control -->
+    <TabControl>
+
+      <!-- Settings tab -->
+      <TabItem Header="Settings">
+        <pgc:PropertyGrid SelectedObject="{Binding EditCopy}"
+                          ShowTitle="False"
+                          Margin="4"/>
+      </TabItem>
+
+      <!-- About tab -->
+      <TabItem Header="About">
+        <DockPanel Margin="8">
+
+          <!-- Links row -->
+          <WrapPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+            <Button Content="GitHub" Command="{Binding OpenGitHubCommand}"/>
+            <Button Content="Send Feedback" Command="{Binding OpenFeedbackCommand}"/>
+            <Button Content="Install Folder" Command="{Binding OpenInstallFolderCommand}"/>
+            <Button Content="Settings Folder" Command="{Binding OpenSettingsFolderCommand}"/>
+            <Button Content="Clear Token Cache" Command="{Binding ClearTokenCacheCommand}"/>
+          </WrapPanel>
+
+          <!-- Versions -->
+          <TextBlock DockPanel.Dock="Top"
+                     Text="Version Information:"
+                     FontWeight="SemiBold"
+                     Margin="0,0,0,4"/>
+          <TextBox DockPanel.Dock="Top"
+                   Text="{Binding VersionsInfo}"
+                   IsReadOnly="True"
+                   FontFamily="Cascadia Mono,Consolas,monospace"
+                   FontSize="11"
+                   Height="80"
+                   AcceptsReturn="True"
+                   Margin="0,0,0,12"/>
+
+          <!-- License -->
+          <TextBlock DockPanel.Dock="Top"
+                     Text="License:"
+                     FontWeight="SemiBold"
+                     Margin="0,0,0,4"/>
+          <TextBox Text="{Binding LicenseText}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   VerticalScrollBarVisibility="Auto"
+                   FontSize="11"/>
+
+        </DockPanel>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</Window>

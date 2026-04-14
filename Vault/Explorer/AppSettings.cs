@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.ComponentModel;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Microsoft.Vault.Explorer.Controls.Lists.Favorites;
 using Newtonsoft.Json;
 
@@ -12,8 +14,12 @@ namespace Microsoft.Vault.Explorer;
 /// Replaces System.Configuration.ApplicationSettingsBase (Windows-only user.config).
 /// Stored at: {SpecialFolder.ApplicationData}/VaultExplorerNext/settings.json
 /// </summary>
-public sealed class AppSettings
+public sealed class AppSettings : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
     private static AppSettings? _instance;
     private static readonly object _lock = new();
 
@@ -130,5 +136,22 @@ public sealed class AppSettings
         }
 
         return false;
+    }
+
+    /// <summary>Copies all property values from <paramref name="src"/> into this instance.</summary>
+    public void CopyFrom(AppSettings src)
+    {
+        CopyToClipboardTimeToLive = src.CopyToClipboardTimeToLive;
+        AboutToExpireWarningPeriod = src.AboutToExpireWarningPeriod;
+        AboutToExpireItemColor = src.AboutToExpireItemColor;
+        ExpiredItemColor = src.ExpiredItemColor;
+        DisabledItemColor = src.DisabledItemColor;
+        JsonConfigurationFilesRoot = src.JsonConfigurationFilesRoot;
+        VaultsJsonFileLocation = src.VaultsJsonFileLocation;
+        VaultAliasesJsonFileLocation = src.VaultAliasesJsonFileLocation;
+        SecretKindsJsonFileLocation = src.SecretKindsJsonFileLocation;
+        CustomTagsJsonFileLocation = src.CustomTagsJsonFileLocation;
+        UserAccountNames = src.UserAccountNames;
+        LastUsedVaultAlias = src.LastUsedVaultAlias;
     }
 }
