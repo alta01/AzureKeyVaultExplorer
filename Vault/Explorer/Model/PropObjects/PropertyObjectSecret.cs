@@ -12,7 +12,6 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Text.RegularExpressions;
-    using System.Windows.Forms;
     using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Model.Collections;
@@ -223,12 +222,13 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 
         public override string GetKeyVaultFileExtension() => ContentType.KeyVaultSecret.ToExtension();
 
-        public override DataObject GetClipboardValue()
+        public override ClipboardPayload GetClipboardValue()
         {
-            var dataObj = base.GetClipboardValue();
-            // We use SetData() and not SetText() to support correctly empty string "" as a value
-            dataObj.SetData(DataFormats.UnicodeText, this.ContentType.IsCertificate() ? CertificateValueObject.FromValue(this.Value)?.Password : this.Value);
-            return dataObj;
+            var basePayload = base.GetClipboardValue();
+            var text = this.ContentType.IsCertificate()
+                ? CertificateValueObject.FromValue(this.Value)?.Password
+                : this.Value;
+            return basePayload with { Text = text };
         }
 
         public override void SaveToFile(string fullName)

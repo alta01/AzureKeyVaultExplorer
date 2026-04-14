@@ -8,6 +8,7 @@ namespace Microsoft.Vault.Explorer.Common
     using System.Threading;
     using System.Windows.Forms;
     using Microsoft.Vault.Explorer.Model.PropObjects;
+    using Microsoft.Vault.Explorer.Services;
     using Microsoft.Vault.Library;
     using Microsoft.Win32;
 
@@ -87,7 +88,7 @@ namespace Microsoft.Vault.Explorer.Common
                     throw new ArgumentOutOfRangeException(nameof(this.Collection), $"Invalid endpoint {this.Collection}");
             }
 
-            po.CopyToClipboard(true);
+            po.CopyToClipboard(new WinFormsClipboardService(), new WindowsNotificationService(), true);
         }
 
         /// <summary>

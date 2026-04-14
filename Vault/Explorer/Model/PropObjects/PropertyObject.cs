@@ -5,21 +5,19 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.Specialized;
     using System.ComponentModel;
-    using System.ComponentModel.Design;
     using System.Drawing.Design;
     using System.IO;
-    using System.Windows.Forms;
     using Microsoft.Vault.Explorer.Controls;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Model.Collections;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
+    using Microsoft.Vault.Explorer.Services;
     using Microsoft.Vault.Library;
     using Utils = Microsoft.Vault.Explorer.Common.Utils;
 
     /// <summary>
-    ///     Base class to edit an object via PropertyGrid
+    ///     Base class to edit an object via PropertyGrid / Avalonia.PropertyGrid
     /// </summary>
     [DefaultProperty("Tags")]
     public abstract class PropertyObject : INotifyPropertyChanged
@@ -93,7 +91,6 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
         protected string _value;
 
         [DisplayName("Value")]
-        [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         [Browsable(false)]
         public string Value
         {
@@ -166,19 +163,20 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 
         public abstract string GetKeyVaultFileExtension();
 
-        public virtual DataObject GetClipboardValue()
+        /// <summary>
+        /// Returns a platform-neutral <see cref="ClipboardPayload"/> describing what should be
+        /// placed on the clipboard.  Subclasses override this to add Text and/or FilePath.
+        /// </summary>
+        public virtual ClipboardPayload GetClipboardValue()
         {
-            var dataObj = new DataObject("Preferred DropEffect", DragDropEffects.Move); // "Cut" file to clipboard
-            if (this._contentType.IsCertificate()) // Common logic for .cer and .pfx
+            string filePath = null;
+            if (this._contentType.IsCertificate())
             {
-                var tempPath = Path.Combine(Path.GetTempPath(), this.Name + this._contentType.ToExtension());
-                this.SaveToFile(tempPath);
-                var sc = new StringCollection();
-                sc.Add(tempPath);
-                dataObj.SetFileDropList(sc);
+                filePath = Path.Combine(Path.GetTempPath(), this.Name + this._contentType.ToExtension());
+                this.SaveToFile(filePath);
             }
 
-            return dataObj;
+            return new ClipboardPayload(null, filePath);
         }
 
         public abstract void SaveToFile(string fullName);
@@ -196,36 +194,37 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
         public Dictionary<string, string> ToTagsDictionary()
         {
             var result = new Dictionary<string, string>();
-            // Add all user and custom tags
             foreach (var tagItem in this.Tags)
             {
                 result[tagItem.Name] = tagItem.Value;
             }
 
-            // Add all custom tags which are based on the secret value
             foreach (var tagItem in this.GetValueBasedCustomTags())
             {
                 result[tagItem.Name] = tagItem.Value;
             }
 
-            // Note: Md5 and ChangeBy tags are taken care in the Microsoft.Vault.Library
             return result;
         }
 
         public string GetFileName() => this.Name + this._contentType.ToExtension();
 
-        public void CopyToClipboard(bool showToast)
+        /// <summary>
+        /// Copies the object value to the clipboard using the supplied services.
+        /// </summary>
+        public void CopyToClipboard(IClipboardService clipboardSvc, INotificationService notifySvc, bool showToast)
         {
-            var dataObj = this.GetClipboardValue();
-            if (null != dataObj)
-            {
-                Clipboard.SetDataObject(dataObj, true);
-                Utils.ClearCliboard(Settings.Default.CopyToClipboardTimeToLive, Microsoft.Vault.Library.Utils.CalculateMd5(dataObj.GetText()));
-                if (showToast)
-                {
-                    Utils.ShowToast($"{(this._contentType.IsCertificate() ? "Certificate" : "Secret")} {this.Name} copied to clipboard");
-                }
-            }
+            var payload = this.GetClipboardValue();
+            if (payload.Text is null && payload.FilePath is null)
+                return;
+
+            clipboardSvc.SetPayloadAsync(payload).GetAwaiter().GetResult();
+            clipboardSvc.SpawnClearClipboardProcess(
+                AppSettings.Default.CopyToClipboardTimeToLive,
+                Microsoft.Vault.Library.Utils.CalculateMd5(payload.Text ?? string.Empty));
+
+            if (showToast)
+                notifySvc.ShowToast($"{(this._contentType.IsCertificate() ? "Certificate" : "Secret")} {this.Name} copied to clipboard");
         }
 
         public string GetLinkAsInternetShortcut() => $"[InternetShortcut]\nURL={new VaultHttpsUri(this.Identifier.Identifier).VaultLink}";

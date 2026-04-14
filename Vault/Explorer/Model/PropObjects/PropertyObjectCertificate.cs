@@ -10,7 +10,6 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography.X509Certificates;
-    using System.Windows.Forms;
     using Azure.Security.KeyVault.Certificates;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Dialogs.Passwords;
@@ -164,11 +163,10 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 
         public override string GetKeyVaultFileExtension() => ContentType.KeyVaultCertificate.ToExtension();
 
-        public override DataObject GetClipboardValue()
+        public override ClipboardPayload GetClipboardValue()
         {
-            var dataObj = base.GetClipboardValue();
-            dataObj.SetData(DataFormats.UnicodeText, this.Certificate.ToString());
-            return dataObj;
+            var basePayload = base.GetClipboardValue();
+            return basePayload with { Text = this.Certificate.ToString() };
         }
 
         public override void SaveToFile(string fullName)

@@ -27,6 +27,7 @@ namespace Microsoft.Vault.Explorer
     using Microsoft.Vault.Explorer.Model.Files.Aliases;
     using Microsoft.Vault.Explorer.Model.PropObjects;
     using Microsoft.Vault.Explorer.Properties;
+    using Microsoft.Vault.Explorer.Services;
     using Microsoft.Vault.Library;
     using Action = System.Action;
     using UISettings = Microsoft.Vault.Explorer.Properties.Settings;
@@ -835,7 +836,7 @@ namespace Microsoft.Vault.Explorer
                 {
                     PropertyObject po = null;
                     await op.Invoke($"get {item.Kind} from", async () => po = await item.GetAsync(op.CancellationToken));
-                    po.CopyToClipboard(false); // Always execute on single thread apartment (STA) - UI thread, because of OLE limitations
+                    po.CopyToClipboard(new WinFormsClipboardService(), new WindowsNotificationService(), false); // STA required for OLE clipboard
                 }
             }
         }
@@ -847,7 +848,7 @@ namespace Microsoft.Vault.Explorer
             {
                 using (var op = this.NewUxOperation(this.uxButtonCopyLink, this.uxMenuItemCopyLink))
                 {
-                    Utils.ClipboardSetHyperlink(item.Link, item.Name);
+                    new WinFormsClipboardService().SetHyperlinkAsync(item.Link, item.Name).GetAwaiter().GetResult();
                 }
             }
         }

@@ -83,7 +83,7 @@ namespace Microsoft.Vault.Explorer.Controls.Lists
 
         public string Link => $"{Globals.ActivationUrl}?{this.VaultHttpsUri.VaultLink}";
 
-        public bool AboutToExpire => DateTime.UtcNow + Settings.Default.AboutToExpireWarningPeriod <= (this.Expires ?? DateTime.MaxValue);
+        public bool AboutToExpire => DateTime.UtcNow + AppSettings.Default.AboutToExpireWarningPeriod <= (this.Expires ?? DateTime.MaxValue);
 
         /// <summary>
         ///     True only if current time is within the below range, or range is NULL
@@ -109,9 +109,9 @@ namespace Microsoft.Vault.Explorer.Controls.Lists
                 this.SubItems.Add(null == this.Tags || this.Tags.Count == 0 || !this.Tags.ContainsKey(key) ? "" : string.IsNullOrWhiteSpace(this.Tags[key]) ? "(none)" : this.Tags[key]);
             }
 
-            this.ForeColor = this.AboutToExpire ? this.ForeColor : Settings.Default.AboutToExpireItemColor;
-            this.ForeColor = this.Active ? this.ForeColor : Settings.Default.ExpiredItemColor;
-            this.ForeColor = this.Enabled ? this.ForeColor : Settings.Default.DisabledItemColor;
+            this.ForeColor = this.AboutToExpire ? this.ForeColor : System.Drawing.Color.FromName(AppSettings.Default.AboutToExpireItemColor);
+            this.ForeColor = this.Active ? this.ForeColor : System.Drawing.Color.FromName(AppSettings.Default.ExpiredItemColor);
+            this.ForeColor = this.Enabled ? this.ForeColor : System.Drawing.Color.FromName(AppSettings.Default.DisabledItemColor);
         }
 
         public void RefreshAndSelect()
