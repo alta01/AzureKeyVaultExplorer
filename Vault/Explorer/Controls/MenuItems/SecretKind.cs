@@ -5,13 +5,16 @@ namespace Microsoft.Vault.Explorer.Controls.MenuItems
 {
     using System;
     using System.Text.RegularExpressions;
-    using System.Windows.Forms;
     using Microsoft.Vault.Library;
     using Newtonsoft.Json;
-    using Utils = Microsoft.Vault.Explorer.Common.Utils;
 
+    /// <summary>
+    /// Describes a named secret kind (pattern, validation rules, expiration policy).
+    /// Deserialized from SecretKinds.json.
+    /// Previously extended ToolStripMenuItem; now a plain POCO (Phase 5).
+    /// </summary>
     [JsonObject]
-    public class SecretKind : ToolStripMenuItem
+    public class SecretKind
     {
         [JsonProperty]
         public readonly string Alias;
@@ -46,10 +49,10 @@ namespace Microsoft.Vault.Explorer.Controls.MenuItems
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public readonly TimeSpan MaxExpiration;
 
-        public SecretKind() : base("Custom")
+        public SecretKind()
         {
             this.Alias = "Custom";
-            this.ToolTipText = this.Description = "The name must be a string 1-127 characters in length containing only 0-9, a-z, A-Z, and -.";
+            this.Description = "The name must be a string 1-127 characters in length containing only 0-9, a-z, A-Z, and -.";
             this.NameRegex = Consts.ValidSecretNameRegex;
             this.ValueRegex = new Regex("^.{0,1048576}$", RegexOptions.Singleline | RegexOptions.Compiled);
             this.ValueTemplate = "";
@@ -59,26 +62,19 @@ namespace Microsoft.Vault.Explorer.Controls.MenuItems
             this.MaxExpiration = TimeSpan.MaxValue;
         }
 
-        public SecretKind(string alias) : base(alias)
+        public SecretKind(string alias) : this()
         {
             this.Alias = alias;
-            this.ToolTipText = this.Description = "The name must be a string 1-127 characters in length containing only 0-9, a-z, A-Z, and -.";
-            this.NameRegex = Consts.ValidSecretNameRegex;
-            this.ValueRegex = new Regex("^.{0,1048576}$", RegexOptions.Singleline | RegexOptions.Compiled);
-            this.ValueTemplate = "";
-            this.CertificateFormat = null;
-            this.RequiredCustomTags = new string[0];
-            this.OptionalCustomTags = new string[0];
-            this.MaxExpiration = TimeSpan.MaxValue;
         }
 
         [JsonConstructor]
-        public SecretKind(string alias, string description, string nameRegex, string valueRegex, string valueTemplate,
-            string certificateFormat, string[] requiredCustomTags, string[] optionalCustomTags,
-            TimeSpan defaultExpiration, TimeSpan maxExpiration) : base(alias)
+        public SecretKind(string alias, string description, string nameRegex, string valueRegex,
+            string valueTemplate, string certificateFormat,
+            string[] requiredCustomTags, string[] optionalCustomTags,
+            TimeSpan defaultExpiration, TimeSpan maxExpiration)
         {
             this.Alias = alias;
-            this.ToolTipText = this.Description = description;
+            this.Description = description;
             this.NameRegex = new Regex(nameRegex, RegexOptions.Singleline | RegexOptions.Compiled);
             this.ValueRegex = new Regex(valueRegex, RegexOptions.Singleline | RegexOptions.Compiled);
             this.ValueTemplate = valueTemplate;
@@ -87,17 +83,18 @@ namespace Microsoft.Vault.Explorer.Controls.MenuItems
             this.OptionalCustomTags = optionalCustomTags ?? new string[0];
             this.DefaultExpiration = defaultExpiration;
             this.MaxExpiration = default(TimeSpan) == maxExpiration ? TimeSpan.MaxValue : maxExpiration;
+
             if (this.DefaultExpiration > this.MaxExpiration)
-            {
-                throw new ArgumentOutOfRangeException("DefaultExpiration or MaxExpiration", $"DefaultExpiration value must be less than MaxExpiration in secret kind {alias}");
-            }
+                throw new ArgumentOutOfRangeException(
+                    "DefaultExpiration or MaxExpiration",
+                    $"DefaultExpiration must be less than MaxExpiration in secret kind {alias}");
 
             if (this.RequiredCustomTags.Length + this.OptionalCustomTags.Length > Consts.MaxNumberOfTags)
-            {
-                throw new ArgumentOutOfRangeException("Total CustomTags.Length", $"Too many custom tags for secret kind {alias}, maximum number of tags for secret is only {Consts.MaxNumberOfTags}");
-            }
+                throw new ArgumentOutOfRangeException(
+                    "Total CustomTags.Length",
+                    $"Too many custom tags for secret kind {alias}, maximum is {Consts.MaxNumberOfTags}");
         }
 
-        public override string ToString() => this.Text + " secret name" + Utils.DropDownSuffix;
+        public override string ToString() => this.Alias;
     }
 }

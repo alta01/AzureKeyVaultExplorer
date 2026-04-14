@@ -4,18 +4,14 @@
 namespace Microsoft.Vault.Explorer.Common
 {
     using System;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography;
-    using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Text.RegularExpressions;
-    using System.Windows.Forms;
     using Microsoft.Vault.Core;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
     using Microsoft.Vault.Library;
-    using Microsoft.Win32;
     using Newtonsoft.Json;
 
     public static class Utils
@@ -72,16 +68,6 @@ namespace Microsoft.Vault.Explorer.Common
             throw new FileNotFoundException("Mandatory .json configuration file is not found", path);
         }
 
-        /// <summary>
-        /// Returns a WinForms Cursor loaded from a raw .cur byte buffer.
-        /// Still used by MainForm during Phase 1-3. Deleted in Phase 5 with MainForm.
-        /// </summary>
-        public static Cursor LoadCursorFromResource(byte[] buffer)
-        {
-            using var ms = new MemoryStream(buffer);
-            return new Cursor(ms);
-        }
-
         public static string ConvertToValidSecretName(string name)
         {
             var result = new Regex("[^0-9a-zA-Z-]", RegexOptions.Singleline).Replace(name, "-");
@@ -106,24 +92,6 @@ namespace Microsoft.Vault.Explorer.Common
             }
 
             return sb.ToString();
-        }
-
-        /// <summary>
-        /// Returns a version string for the given PE file.
-        /// Used by the WinForms SettingsDialog — removed in Phase 3 when SettingsView.axaml replaces it.
-        /// </summary>
-        public static string GetFileVersionString(string title, string peFilename, string optionalPrefix = "")
-        {
-            var filepath = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), peFilename);
-            string version = "Unknown";
-            try
-            {
-                var verInfo = FileVersionInfo.GetVersionInfo(filepath);
-                version = $"{verInfo.FileMajorPart}.{verInfo.FileMinorPart}.{verInfo.FileBuildPart}.{verInfo.FilePrivatePart}";
-            }
-            catch { }
-
-            return $"{title}{version}{optionalPrefix}";
         }
 
         public static string NewSecurePassword()
@@ -151,30 +119,5 @@ namespace Microsoft.Vault.Explorer.Common
             return Convert.ToBase64String(buff);
         }
 
-        /// <summary>
-        /// Sets ClickOnce Add/Remove Programs icon. Windows + ClickOnce only.
-        /// Kept for Phase 1-3 compatibility; removed when ClickOnce is retired (Phase 5).
-        /// </summary>
-        public static void ClickOnce_SetAddRemoveProgramsIcon()
-        {
-            if (ApplicationDeployment.IsNetworkDeployed && ApplicationDeployment.CurrentDeployment.IsFirstRun)
-            {
-                try
-                {
-                    using var myUninstallKey = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall");
-                    foreach (var subKeyName in myUninstallKey.GetSubKeyNames())
-                    {
-                        using var myKey = myUninstallKey.OpenSubKey(subKeyName, true);
-                        object myValue = myKey.GetValue("DisplayName");
-                        if (myValue != null && myValue.ToString() == Globals.ProductName)
-                        {
-                            myKey.SetValue("DisplayIcon", Application.ExecutablePath);
-                            break;
-                        }
-                    }
-                }
-                catch { }
-            }
-        }
     }
 }

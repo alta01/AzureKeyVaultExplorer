@@ -64,6 +64,9 @@ namespace Microsoft.Vault.Explorer.ViewModels
         public string Status =>
             (Enabled ? "Enabled" : "Disabled") + (Active ? ", Active" : ", Expired");
 
+        /// <summary>Human-readable relative expiry string (e.g. "42 days", "Expired").</summary>
+        public string ExpiresDisplay => Common.Utils.ExpirationToString(Expires);
+
         /// <summary>True when the current time is within [NotBefore, Expires].</summary>
         public bool Active =>
             DateTime.UtcNow >= (NotBefore ?? DateTime.MinValue) &&

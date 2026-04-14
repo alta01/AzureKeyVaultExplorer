@@ -1,46 +1,55 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Build\AutoVersioning.props" />
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <OutputType>WinExe</OutputType>
+    <!-- Phase 5: cross-platform net10.0; build per-platform with -r win-x64 / osx-arm64 / linux-x64 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
     <RootNamespace>Microsoft.Vault.Explorer</RootNamespace>
     <AssemblyDescription>Azure Key Vault Explorer</AssemblyDescription>
-    <ApplicationIcon>$(AssemblyName).ico</ApplicationIcon>
-    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch Condition="'$(BuildingInsideVisualStudio)' != ''">None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
     <AutoVersioning>true</AutoVersioning>
     <ProductName>VaultExplorer</ProductName>
     <AssemblyCompany>VaultExplorer</AssemblyCompany>
     <ApplicationRevision>1</ApplicationRevision>
     <ApplicationVersion>2024.1219.1449.37</ApplicationVersion>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
-    <NoWarn>;NU1507</NoWarn>
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
     <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
-    <GenerateManifests>false</GenerateManifests>
-    <TargetZone>LocalIntranet</TargetZone>
-    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
-    <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
     <GenerateResourceWarnOnBinaryFormatterUse>false</GenerateResourceWarnOnBinaryFormatterUse>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-	<SelfContained>True</SelfContained>
+    <SelfContained>True</SelfContained>
+    <!-- Avalonia apps need this to locate the app entry point -->
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
+
+  <!-- ── Packages ─────────────────────────────────────────────────────────── -->
   <ItemGroup>
-    <!-- WinForms packages — will be removed in Phase 5 of Avalonia migration -->
-    <PackageReference Include="fernandreu.ScintillaNET" Version="4.2.0" />
+    <!-- Azure SDK -->
     <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.2.0" />
     <PackageReference Include="Azure.Identity" Version="1.13.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.77.1" />
-    <PackageReference Include="Microsoft.Identity.Client.Desktop" Version="4.77.1" />
+    <!-- Avalonia UI stack -->
+    <PackageReference Include="Avalonia" Version="11.2.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.0" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.2.0" />
+    <!-- AvaloniaEdit replaces ScintillaNET -->
+    <PackageReference Include="AvaloniaEdit" Version="11.1.0" />
+    <!-- Avalonia.PropertyGrid replaces WinForms PropertyGrid -->
+    <PackageReference Include="Avalonia.PropertyGrid" Version="11.2.0" />
+    <!-- DynamicData for reactive list filtering -->
+    <PackageReference Include="DynamicData" Version="9.0.4" />
+    <!-- DI container -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
   </ItemGroup>
+
+  <!-- ── AXAML compilation ─────────────────────────────────────────────────── -->
   <ItemGroup>
-    <!-- Avalonia AXAML compilation — Phase 0 scaffold -->
     <AvaloniaXaml Update="App.axaml">
       <Generator>MSBuild:Compile</Generator>
     </AvaloniaXaml>
-    <!-- Phase 3 dialog views -->
+    <AvaloniaXaml Update="Views\MainWindow.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
     <AvaloniaXaml Update="Views\Dialogs\MessageDialogView.axaml">
       <Generator>MSBuild:Compile</Generator>
     </AvaloniaXaml>
@@ -63,28 +72,9 @@
       <Generator>MSBuild:Compile</Generator>
     </AvaloniaXaml>
   </ItemGroup>
+
+  <!-- ── Static content ───────────────────────────────────────────────────── -->
   <ItemGroup>
-    <!-- Avalonia migration packages — Phase 0 scaffold (not yet wired as entry point) -->
-    <PackageReference Include="Avalonia" Version="11.2.0" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.2.0" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.0" />
-    <PackageReference Include="Avalonia.ReactiveUI" Version="11.2.0" />
-    <!-- AvaloniaEdit replaces ScintillaNET in Phase 3 -->
-    <PackageReference Include="AvaloniaEdit" Version="11.1.0" />
-    <!-- Avalonia.PropertyGrid replaces WinForms PropertyGrid in Phase 3 -->
-    <PackageReference Include="Avalonia.PropertyGrid" Version="11.2.0" />
-    <!-- DynamicData for reactive list filtering in Phase 2 -->
-    <PackageReference Include="DynamicData" Version="9.0.4" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Update="Controls\Lists\ListViewSecrets.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Update="Properties\Settings.Designer.cs">
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
     <Compile Update="Controls\MenuItems\CustomVersion.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -113,16 +103,13 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- ── Project references ───────────────────────────────────────────────── -->
   <ItemGroup>
     <ProjectReference Include="..\Library\VaultLibrary.csproj" />
     <ProjectReference Include="..\ClearClipboard\ClearClipboard.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
+
   <Target Name="AfterCompile">
     <GetAssemblyIdentity AssemblyFiles="$(IntermediateOutputPath)$(TargetFileName)">
       <Output TaskParameter="Assemblies" ItemName="TargetAssemblyIdentity" />

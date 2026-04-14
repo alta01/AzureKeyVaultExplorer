@@ -3,11 +3,9 @@ namespace Microsoft.Vault.Explorer.Model.Collections
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Drawing.Design;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Library;
 
-    [Editor(typeof(ExpandableCollectionEditor<ObservableTagItemsCollection, TagItem>), typeof(UITypeEditor))]
     public class ObservableTagItemsCollection : ObservableCustomCollection<TagItem>
     {
         public ObservableTagItemsCollection()

@@ -2,10 +2,8 @@ namespace Microsoft.Vault.Explorer.Model.Collections
 {
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Drawing.Design;
     using Microsoft.Vault.Explorer.Common;
 
-    [Editor(typeof(ExpandableCollectionEditor<ObservableLifetimeActionsCollection, LifetimeActionItem>), typeof(UITypeEditor))]
     public class ObservableLifetimeActionsCollection : ObservableCustomCollection<LifetimeActionItem>
     {
         public ObservableLifetimeActionsCollection()

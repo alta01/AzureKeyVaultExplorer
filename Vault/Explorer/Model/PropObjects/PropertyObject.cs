@@ -6,9 +6,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Drawing.Design;
     using System.IO;
-    using Microsoft.Vault.Explorer.Controls;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Model.Collections;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
@@ -59,7 +57,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 
         [Category("General")]
         [DisplayName("Valid from time (UTC)")]
-        [Editor(typeof(NullableDateTimePickerEditor), typeof(UITypeEditor))]
+
         public DateTime? NotBefore
         {
             get { return this._notBefore; }
@@ -74,7 +72,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 
         [Category("General")]
         [DisplayName("Valid until time (UTC)")]
-        [Editor(typeof(NullableDateTimePickerEditor), typeof(UITypeEditor))]
+
         public DateTime? Expires
         {
             get { return this._expires; }

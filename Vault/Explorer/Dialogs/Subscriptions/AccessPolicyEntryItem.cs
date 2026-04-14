@@ -2,11 +2,9 @@ namespace Microsoft.Vault.Explorer.Dialogs.Subscriptions
 {
     using System;
     using System.ComponentModel;
-    using System.Drawing.Design;
     using Azure.ResourceManager.KeyVault.Models;
     using Newtonsoft.Json;
 
-    [Editor(typeof(ExpandableObjectConverter), typeof(UITypeEditor))]
     public class AccessPolicyEntryItem
     {
         private readonly KeyVaultAccessPolicy _ape;
