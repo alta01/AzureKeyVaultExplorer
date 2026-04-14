@@ -2,33 +2,32 @@ namespace Microsoft.Vault.Explorer.Controls.Lists.Favorites
 {
     public static class FavoriteSecretUtil
     {
+        private static FavoriteSecretsDictionary Store => AppSettings.Default.FavoriteSecretsDictionary;
+
         public static bool Contains(string vaultAlias, string secretName)
         {
-            return Settings.Default.FavoriteSecretsDictionary.ContainsKey(vaultAlias) ? Settings.Default.FavoriteSecretsDictionary[vaultAlias].ContainsKey(secretName) ? true : false : false;
+            return Store.ContainsKey(vaultAlias) && Store[vaultAlias].ContainsKey(secretName);
         }
 
         public static void Add(string vaultAlias, string secretName)
         {
-            if (false == Settings.Default.FavoriteSecretsDictionary.ContainsKey(vaultAlias))
-            {
-                Settings.Default.FavoriteSecretsDictionary.Add(vaultAlias, new FavoriteSecrets());
-            }
+            if (!Store.ContainsKey(vaultAlias))
+                Store.Add(vaultAlias, new FavoriteSecrets());
 
-            var favorites = Settings.Default.FavoriteSecretsDictionary[vaultAlias];
-            favorites.Add(secretName, new FavoriteSecret());
+            Store[vaultAlias][secretName] = new FavoriteSecret();
+            AppSettings.Default.Save();
         }
 
         public static void Remove(string vaultAlias, string secretName)
         {
-            if (Settings.Default.FavoriteSecretsDictionary.ContainsKey(vaultAlias))
-            {
-                var favorites = Settings.Default.FavoriteSecretsDictionary[vaultAlias];
-                favorites.Remove(secretName);
-                if (favorites.Count == 0)
-                {
-                    Settings.Default.FavoriteSecretsDictionary.Remove(vaultAlias);
-                }
-            }
+            if (!Store.ContainsKey(vaultAlias)) return;
+
+            var favorites = Store[vaultAlias];
+            favorites.Remove(secretName);
+            if (favorites.Count == 0)
+                Store.Remove(vaultAlias);
+
+            AppSettings.Default.Save();
         }
     }
 }

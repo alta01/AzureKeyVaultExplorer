@@ -28,6 +28,7 @@ namespace Microsoft.Vault.Explorer
     using Microsoft.Vault.Explorer.Model.PropObjects;
     using Microsoft.Vault.Explorer.Properties;
     using Microsoft.Vault.Explorer.Services;
+    using Microsoft.Vault.Explorer.ViewModels;
     using Microsoft.Vault.Library;
     using Action = System.Action;
     using UISettings = Microsoft.Vault.Explorer.Properties.Settings;
@@ -53,6 +54,12 @@ namespace Microsoft.Vault.Explorer
         public Vault CurrentVault { get; private set; }
 
         public ListViewSecrets ListViewSecrets => this.uxListViewSecrets;
+
+        /// <summary>
+        /// Avalonia MVVM list ViewModel. Wired and populated in Phase 4.
+        /// In Phase 2-3, it exists but is not yet the source of truth for the UI.
+        /// </summary>
+        public VaultListViewModel VaultListViewModel { get; } = new VaultListViewModel();
 
         #endregion
 
