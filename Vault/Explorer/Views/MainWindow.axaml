@@ -56,131 +56,139 @@
                 SelectedItem="{Binding SelectedVaultAlias}"
                 Width="220"
                 DockPanel.Dock="Left"
-                Margin="0,0,8,0"
+                Margin="0,0,4,0"
                 ToolTip.Tip="Select a vault to explore. Choose 'Pick vault from subscription...' to browse your Azure subscriptions."/>
+
+      <!-- Vault connection error indicator -->
+      <Button IsVisible="{Binding HasVaultConnectionError}"
+              DockPanel.Dock="Left"
+              Padding="3,0"
+              Margin="0,0,4,0"
+              Background="Transparent"
+              BorderThickness="0"
+              ToolTip.Tip="{Binding VaultConnectionError}"
+              Command="{Binding ShowVaultErrorCommand}">
+        <mi:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.AlertCircle}"
+                         Width="18" Height="18" Foreground="OrangeRed"/>
+      </Button>
 
       <Border Width="1" Height="18" Background="#55888888"
               Margin="0,0,8,0" VerticalAlignment="Center" DockPanel.Dock="Left"/>
 
-      <!-- Scrollable toolbar -->
-      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-        <StackPanel Orientation="Horizontal" Spacing="2">
+      <!-- Scrollable toolbar — groups wrapped in subtle rounded boxes -->
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                    Padding="0,0,0,8">
+        <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,1,0,1">
 
-          <!-- Refresh -->
-          <Button Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh vault (F5)" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="Refresh" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Refresh" VerticalAlignment="Center" FontSize="12"/>
+          <!-- ── Refresh ─────────────────────────────────────────────── -->
+          <Border Background="#14808080" CornerRadius="4" Padding="1">
+            <StackPanel Orientation="Horizontal">
+              <Button Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh vault (F5)" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="Refresh" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Refresh" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
             </StackPanel>
-          </Button>
+          </Border>
 
-          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
-
-          <!-- Add Secret -->
-          <Button Command="{Binding AddSecretCommand}" ToolTip.Tip="Add new secret" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="LockPlus" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="+ Secret" VerticalAlignment="Center" FontSize="12"/>
+          <!-- ── Create ─────────────────────────────────────────────── -->
+          <Border Background="#14808080" CornerRadius="4" Padding="1">
+            <StackPanel Orientation="Horizontal" Spacing="1">
+              <Button Command="{Binding AddSecretCommand}" ToolTip.Tip="Add new secret" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="LockPlus" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="+ Secret" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding AddCertFromFileCommand}" ToolTip.Tip="Add certificate from file" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="Certificate" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="+ Cert" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
             </StackPanel>
-          </Button>
+          </Border>
 
-          <!-- Add Certificate -->
-          <Button Command="{Binding AddCertFromFileCommand}" ToolTip.Tip="Add certificate from file" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="Certificate" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="+ Cert" VerticalAlignment="Center" FontSize="12"/>
+          <!-- ── Item Actions ───────────────────────────────────────── -->
+          <Border Background="#14808080" CornerRadius="4" Padding="1">
+            <StackPanel Orientation="Horizontal" Spacing="1">
+              <Button Command="{Binding EditCommand}" ToolTip.Tip="Edit selected item (Enter)" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="PencilOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Edit" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding ToggleCommand}" ToolTip.Tip="Enable or disable the selected item" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="LockOpenOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding ToggleText}" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding DeleteCommand}" ToolTip.Tip="Delete selected item(s) (Del)" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Delete" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
             </StackPanel>
-          </Button>
+          </Border>
 
-          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
-
-          <!-- Edit -->
-          <Button Command="{Binding EditCommand}" ToolTip.Tip="Edit selected item (Enter)" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="PencilOutline" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Edit" VerticalAlignment="Center" FontSize="12"/>
+          <!-- ── Share ──────────────────────────────────────────────── -->
+          <Border Background="#14808080" CornerRadius="4" Padding="1">
+            <StackPanel Orientation="Horizontal" Spacing="1">
+              <Button Command="{Binding CopyValueCommand}" ToolTip.Tip="Copy value to clipboard" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="ContentCopy" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Copy" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding CopyLinkCommand}" ToolTip.Tip="Copy vault:// deep link" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="LinkVariant" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Link" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding SaveToFileCommand}" ToolTip.Tip="Save secret/certificate to encrypted file" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="ContentSave" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Save" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
             </StackPanel>
-          </Button>
+          </Border>
 
-          <!-- Enable / Disable -->
-          <Button Command="{Binding ToggleCommand}" ToolTip.Tip="Enable or disable the selected item" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="LockOpenOutline" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="{Binding ToggleText}" VerticalAlignment="Center" FontSize="12"/>
+          <!-- ── Copy As ────────────────────────────────────────────── -->
+          <Border Background="#14808080" CornerRadius="4" Padding="1">
+            <StackPanel Orientation="Horizontal" Spacing="1">
+              <Button Command="{Binding CopyAsEnvVarCommand}" ToolTip.Tip="Copy as environment variable  →  NAME=value" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="Console" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="ENV" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding CopyAsDockerEnvCommand}" ToolTip.Tip="Copy as Docker flag  →  --env NAME=value" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="Docker" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Docker" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding CopyAsK8sYamlCommand}" ToolTip.Tip="Copy as Kubernetes secret YAML block" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="Kubernetes" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="K8s" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding CopyNameCommand}" ToolTip.Tip="Copy item name to clipboard" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="KeyVariant" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Name" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
             </StackPanel>
-          </Button>
+          </Border>
 
-          <!-- Delete -->
-          <Button Command="{Binding DeleteCommand}" ToolTip.Tip="Delete selected item(s) (Del)" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Delete" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
-
-          <!-- Copy Value -->
-          <Button Command="{Binding CopyValueCommand}" ToolTip.Tip="Copy value to clipboard" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="ContentCopy" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Copy" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Copy Link -->
-          <Button Command="{Binding CopyLinkCommand}" ToolTip.Tip="Copy vault:// deep link" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="LinkVariant" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Link" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Save to File -->
-          <Button Command="{Binding SaveToFileCommand}" ToolTip.Tip="Save secret/certificate to encrypted file" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="ContentSave" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Save" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
-
-          <!-- Copy as ENV var -->
-          <Button Command="{Binding CopyAsEnvVarCommand}" ToolTip.Tip="Copy as environment variable  →  NAME=value" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="Console" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Copy as ENV" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Copy as Docker -->
-          <Button Command="{Binding CopyAsDockerEnvCommand}" ToolTip.Tip="Copy as Docker flag  →  --env NAME=value" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="Docker" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Copy as Docker" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Copy as K8s YAML -->
-          <Button Command="{Binding CopyAsK8sYamlCommand}" ToolTip.Tip="Copy as Kubernetes secret YAML block" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="Kubernetes" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Copy as K8s" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <!-- Copy Name -->
-          <Button Command="{Binding CopyNameCommand}" ToolTip.Tip="Copy item name to clipboard" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="KeyVariant" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Copy Name" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
-
-          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
-
-          <!-- Favorite -->
+          <!-- ── Favorite (standalone) ──────────────────────────────── -->
           <ToggleButton Command="{Binding ToggleFavoriteCommand}"
                         IsChecked="{Binding IsFavorite, Mode=OneWay}"
                         ToolTip.Tip="Mark or unmark as favorite" Padding="6,3">
@@ -192,21 +200,23 @@
 
           <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
 
-          <!-- Settings -->
-          <Button Command="{Binding SettingsCommand}" ToolTip.Tip="Open settings" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="CogOutline" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Settings" VerticalAlignment="Center" FontSize="12"/>
+          <!-- ── Settings & Help ────────────────────────────────────── -->
+          <Border Background="#14808080" CornerRadius="4" Padding="1">
+            <StackPanel Orientation="Horizontal" Spacing="1">
+              <Button Command="{Binding SettingsCommand}" ToolTip.Tip="Open settings" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="CogOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Settings" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding HelpCommand}" ToolTip.Tip="Show keyboard shortcuts and help" Padding="6,3">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <mi:MaterialIcon Kind="HelpCircleOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+                  <TextBlock Text="Help" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </Button>
             </StackPanel>
-          </Button>
-
-          <!-- Help -->
-          <Button Command="{Binding HelpCommand}" ToolTip.Tip="Show keyboard shortcuts and help" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="5">
-              <mi:MaterialIcon Kind="HelpCircleOutline" Width="16" Height="16" VerticalAlignment="Center"/>
-              <TextBlock Text="Help" VerticalAlignment="Center" FontSize="12"/>
-            </StackPanel>
-          </Button>
+          </Border>
 
         </StackPanel>
       </ScrollViewer>

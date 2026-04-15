@@ -126,6 +126,16 @@ namespace Microsoft.Vault.Explorer.Views
                     })
                     .DisposeWith(d);
 
+                // ── Vault unreachable dialog ──────────────────────────────────
+                ViewModel.ShowVaultUnreachableInteraction
+                    .RegisterHandler(async ctx =>
+                    {
+                        var dlg = new VaultUnreachableDialogView { DataContext = ctx.Input };
+                        var result = await dlg.ShowDialog<VaultUnreachableAction>(this);
+                        ctx.SetOutput(result);
+                    })
+                    .DisposeWith(d);
+
                 // DataGrid multi-selection and drag-drop are wired via AXAML event handlers
                 // (SelectionChanged="OnDataGridSelectionChanged", Drop="OnGridDrop", DragOver="OnGridDragOver")
                 // so no FindControl needed here.

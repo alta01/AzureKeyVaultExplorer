@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Microsoft.Vault.Explorer.ViewModels"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="Microsoft.Vault.Explorer.Views.Dialogs.VaultUnreachableDialogView"
+        x:DataType="vm:VaultUnreachableDialogViewModel"
+        Title="Vault Unreachable"
+        Width="540" Height="340"
+        MinWidth="420" MinHeight="260"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+
+  <DockPanel Margin="16">
+
+    <!-- Button row -->
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button Content="← Back to vault picker"
+              Command="{Binding GoBackCommand}"
+              Click="GoBackButton_Click"
+              Width="160"/>
+      <Button Content="{Binding RetryLabel}"
+              Command="{Binding RetryCommand}"
+              Click="RetryButton_Click"
+              IsDefault="True"
+              Width="160"/>
+      <Button Content="Cancel"
+              IsCancel="True"
+              Command="{Binding CancelCommand}"
+              Click="CancelButton_Click"
+              Width="80"/>
+    </StackPanel>
+
+    <!-- Content -->
+    <StackPanel Spacing="10">
+
+      <!-- Header -->
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <mi:MaterialIcon Kind="AlertCircleOutline" Width="36" Height="36"
+                         Foreground="OrangeRed" VerticalAlignment="Center"/>
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="Cannot reach vault" FontSize="16" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding VaultName}" FontSize="12" Opacity="0.6"/>
+        </StackPanel>
+      </StackPanel>
+
+      <!-- Error message -->
+      <TextBlock Text="{Binding ErrorMessage}"
+                 TextWrapping="Wrap"
+                 FontSize="12"
+                 Margin="0,4,0,0"/>
+
+      <!-- Retry progress -->
+      <StackPanel IsVisible="{Binding IsRetrying}" Spacing="4">
+        <ProgressBar IsIndeterminate="True" Height="3"/>
+        <TextBlock Text="{Binding RetryLabel, StringFormat='Retrying… {0}'}"
+                   FontSize="11" Opacity="0.6"/>
+      </StackPanel>
+
+      <!-- Expandable details -->
+      <Expander Header="Show details" IsExpanded="False">
+        <TextBox Text="{Binding FullDetails}"
+                 IsReadOnly="True"
+                 FontFamily="Monospace"
+                 FontSize="10"
+                 TextWrapping="Wrap"
+                 MaxHeight="120"
+                 AcceptsReturn="True"/>
+      </Expander>
+
+    </StackPanel>
+  </DockPanel>
+</Window>

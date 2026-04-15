@@ -139,6 +139,19 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         private CancellationTokenSource? _cts;
 
+        // ── Vault connection error ─────────────────────────────────────────────
+        private string? _vaultConnectionError;
+        public string? VaultConnectionError
+        {
+            get => _vaultConnectionError;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _vaultConnectionError, value);
+                this.RaisePropertyChanged(nameof(HasVaultConnectionError));
+            }
+        }
+        public bool HasVaultConnectionError => VaultConnectionError != null;
+
         // ── Per-selection state ────────────────────────────────────────────────
         private bool _isFavorite;
         public bool IsFavorite
@@ -174,9 +187,11 @@ namespace Microsoft.Vault.Explorer.ViewModels
         public ReactiveCommand<Unit, Unit> HelpCommand { get; }
         public ReactiveCommand<Unit, Unit> CancelCommand { get; }
         public ReactiveCommand<Unit, Unit> ExitCommand { get; }
+        public ReactiveCommand<Unit, Unit> ShowVaultErrorCommand { get; }
 
         // ── Interactions (wired in MainWindow.axaml.cs) ───────────────────────
         public Interaction<Unit, VaultAlias?> PickVaultInteraction { get; } = new();
+        public Interaction<VaultUnreachableDialogViewModel, VaultUnreachableAction> ShowVaultUnreachableInteraction { get; } = new();
         public Interaction<FilePickerOpenOptions, string?> OpenFileInteraction { get; } = new();
         public Interaction<FilePickerSaveOptions, string?> SaveFileInteraction { get; } = new();
         /// <summary>Input = null for new secret, VaultItemViewModel for edit.</summary>
@@ -224,6 +239,11 @@ namespace Microsoft.Vault.Explorer.ViewModels
             HelpCommand = ReactiveCommand.CreateFromTask(ShowHelpAsync);
             CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.IsBusy));
             CancelCommand.ThrownExceptions.Subscribe(_ => { /* swallow — Cancel is best-effort */ });
+            ShowVaultErrorCommand = ReactiveCommand.CreateFromTask(async () =>
+            {
+                if (VaultConnectionError != null && CurrentVaultAlias != null)
+                    await ShowVaultUnreachableDialogAsync(CurrentVaultAlias, new Exception(VaultConnectionError));
+            });
             ExitCommand = ReactiveCommand.Create(() =>
             {
                 if (Avalonia.Application.Current?.ApplicationLifetime
@@ -385,8 +405,10 @@ namespace Microsoft.Vault.Explorer.ViewModels
         }
 
         /// <summary>Opens a new tab for the given alias (or refreshes if already open).</summary>
-        private async Task OpenVaultTabAsync(VaultAlias alias)
+        private async Task OpenVaultTabAsync(VaultAlias alias, bool suppressErrorDialog = false)
         {
+            VaultConnectionError = null;
+
             using var cts = new CancellationTokenSource();
             _cts = cts;
             IsBusy = true;
@@ -395,11 +417,12 @@ namespace Microsoft.Vault.Explorer.ViewModels
             // Reuse existing tab for the same alias, or create a new one
             var existingTab = Tabs.FirstOrDefault(t =>
                 string.Equals(t.VaultAlias.Alias, alias.Alias, StringComparison.OrdinalIgnoreCase));
+            bool existingTabReused = existingTab != null;
 
             VaultTabViewModel tab;
-            if (existingTab != null)
+            if (existingTabReused)
             {
-                tab = existingTab;
+                tab = existingTab!;
                 tab.VaultList.Clear();
                 SelectedItem = null;
             }
@@ -475,12 +498,58 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 UpdateItemCountText();
             }
             catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                // Remove the speculatively added tab on failure
+                if (!existingTabReused)
+                {
+                    Tabs.Remove(tab);
+                    tab.Dispose();
+                    SelectedTab = Tabs.LastOrDefault();
+                }
+                VaultConnectionError = ex.Message;
+                if (!suppressErrorDialog)
+                    await ShowVaultUnreachableDialogAsync(alias, ex);
+                else
+                    throw; // re-throw for retry loop to handle
+            }
             finally
             {
                 IsBusy = false;
                 StatusText = "";
                 _cts = null;
             }
+        }
+
+        private async Task ShowVaultUnreachableDialogAsync(VaultAlias alias, Exception ex)
+        {
+            var vm = new VaultUnreachableDialogViewModel(alias.Alias, ex);
+            VaultUnreachableAction action;
+            do
+            {
+                action = await ShowVaultUnreachableInteraction.Handle(vm);
+                vm.NotifyRetryComplete();
+                if (action == VaultUnreachableAction.Retry)
+                {
+                    // Attempt a reload; suppressErrorDialog=true so we handle the result here
+                    try
+                    {
+                        await OpenVaultTabAsync(alias, suppressErrorDialog: true);
+                        VaultConnectionError = null;
+                        return; // success — exit loop
+                    }
+                    catch (Exception retryEx)
+                    {
+                        // Update the dialog VM with the new error and loop
+                        vm = new VaultUnreachableDialogViewModel(alias.Alias, retryEx);
+                        VaultConnectionError = retryEx.Message;
+                    }
+                }
+            }
+            while (action == VaultUnreachableAction.Retry);
+
+            if (action == VaultUnreachableAction.GoBack)
+                await OnVaultAliasSelectedAsync(PickVaultText);
         }
 
         // ── Add operations ─────────────────────────────────────────────────────

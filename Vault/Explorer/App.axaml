@@ -7,6 +7,10 @@
     <Application.Styles>
         <FluentTheme />
         <materialIcons:MaterialIconStyles />
+        <!-- Keep horizontal scrollbars slim so they don't overlap toolbar button text -->
+        <Style Selector="ScrollBar:horizontal">
+            <Setter Property="Height" Value="6"/>
+        </Style>
     </Application.Styles>
 
     <!-- Active theme ResourceDictionary is merged here at runtime by App.ApplyTheme() -->
