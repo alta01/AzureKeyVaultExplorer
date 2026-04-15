@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Explorer.ViewModels
 {
     using System;
+    using System.Collections.ObjectModel;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
@@ -14,12 +15,189 @@ namespace Microsoft.Vault.Explorer.ViewModels
     using Microsoft.Vault.Library;
     using ReactiveUI;
 
+    // ── Option record types ────────────────────────────────────────────────────
+
+    public sealed record ThemeOption(string Name, string Description);
+
+    public sealed record TimeSpanOption(string Label, TimeSpan? Value)
+    {
+        // Null Value = "Custom" sentinel
+        public bool IsCustom => Value is null;
+        public override string ToString() => Label;
+    }
+
+    public sealed record ColorOption(string Label, string HexColor)
+    {
+        public override string ToString() => Label;
+    }
+
+    // ── ViewModel ─────────────────────────────────────────────────────────────
+
     public sealed class SettingsViewModel : ViewModelBase
     {
-        // ── Bindable settings ─────────────────────────────────────────────────
+        // ── Static option lists ────────────────────────────────────────────────
 
-        /// <summary>Live editable copy of settings; written back on Save.</summary>
+        public static readonly ThemeOption[] ThemeOptions =
+        {
+            new("Ocean Depths",      "Dark — professional maritime palette (navy + teal)"),
+            new("Midnight Galaxy",   "Dark — dramatic cosmic palette (deep purple + blue)"),
+            new("Modern Minimalist", "Light — clean contemporary palette (charcoal + gray)"),
+            new("Arctic Frost",      "Light — crisp cool palette (steel blue + ice)"),
+        };
+
+        public static readonly TimeSpanOption[] ClipboardDelayOptions =
+        {
+            new("Never",      TimeSpan.Zero),
+            new("15 seconds", TimeSpan.FromSeconds(15)),
+            new("25 seconds", TimeSpan.FromSeconds(25)),
+            new("1 minute",   TimeSpan.FromMinutes(1)),
+            new("5 minutes",  TimeSpan.FromMinutes(5)),
+        };
+
+        public static readonly TimeSpanOption[] ExpiryWarningOptions =
+        {
+            new("24 hours",  TimeSpan.FromHours(24)),
+            new("3 days",    TimeSpan.FromDays(3)),
+            new("1 week",    TimeSpan.FromDays(7)),
+            new("2 weeks",   TimeSpan.FromDays(14)),
+            new("30 days",   TimeSpan.FromDays(30)),
+            new("Custom",    null),
+        };
+
+        public static readonly ColorOption[] StatusColorOptions =
+        {
+            new("Red",       "#E53935"),
+            new("Crimson",   "#C62828"),
+            new("Orange",    "#FB8C00"),
+            new("Gold",      "#F9A825"),
+            new("Yellow",    "#FDD835"),
+            new("Green",     "#43A047"),
+            new("Teal",      "#00897B"),
+            new("Blue",      "#1E88E5"),
+            new("Purple",    "#8E24AA"),
+            new("Gray",      "#757575"),
+            new("Dark Gray", "#424242"),
+        };
+
+        // ── Bindable settings copy ─────────────────────────────────────────────
+
+        /// <summary>Live editable copy — written back to AppSettings.Default on Save.</summary>
         public AppSettings EditCopy { get; } = CloneSettings();
+
+        // ── Dropdown selections ────────────────────────────────────────────────
+
+        private ThemeOption _selectedTheme;
+        public ThemeOption SelectedTheme
+        {
+            get => _selectedTheme;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedTheme, value);
+                if (value == null) return;
+                EditCopy.Theme = value.Name;
+                IsDirty = true;
+                App.ApplyTheme(value.Name);
+            }
+        }
+
+        private TimeSpanOption _selectedClipboardDelay;
+        public TimeSpanOption SelectedClipboardDelay
+        {
+            get => _selectedClipboardDelay;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedClipboardDelay, value);
+                if (value?.Value is TimeSpan ts)
+                {
+                    EditCopy.CopyToClipboardTimeToLive = ts;
+                    IsDirty = true;
+                }
+            }
+        }
+
+        private TimeSpanOption _selectedExpiryWarning;
+        public TimeSpanOption SelectedExpiryWarning
+        {
+            get => _selectedExpiryWarning;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedExpiryWarning, value);
+                if (value?.Value is TimeSpan ts)
+                {
+                    EditCopy.AboutToExpireWarningPeriod = ts;
+                    IsDirty = true;
+                }
+                this.RaisePropertyChanged(nameof(IsCustomExpiry));
+            }
+        }
+
+        public bool IsCustomExpiry => _selectedExpiryWarning?.IsCustom == true;
+
+        private int _customExpiryDays = 14;
+        public int CustomExpiryDays
+        {
+            get => _customExpiryDays;
+            set
+            {
+                var clamped = Math.Clamp(value, 1, 90);
+                this.RaiseAndSetIfChanged(ref _customExpiryDays, clamped);
+                if (IsCustomExpiry)
+                {
+                    EditCopy.AboutToExpireWarningPeriod = TimeSpan.FromDays(clamped);
+                    IsDirty = true;
+                }
+            }
+        }
+
+        private ColorOption _selectedExpiredColor;
+        public ColorOption SelectedExpiredColor
+        {
+            get => _selectedExpiredColor;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedExpiredColor, value);
+                if (value == null) return;
+                EditCopy.ExpiredItemColor = value.Label;
+                IsDirty = true;
+            }
+        }
+
+        private ColorOption _selectedExpiringColor;
+        public ColorOption SelectedExpiringColor
+        {
+            get => _selectedExpiringColor;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedExpiringColor, value);
+                if (value == null) return;
+                EditCopy.AboutToExpireItemColor = value.Label;
+                IsDirty = true;
+            }
+        }
+
+        private ColorOption _selectedDisabledColor;
+        public ColorOption SelectedDisabledColor
+        {
+            get => _selectedDisabledColor;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedDisabledColor, value);
+                if (value == null) return;
+                EditCopy.DisabledItemColor = value.Label;
+                IsDirty = true;
+            }
+        }
+
+        // ── Accounts list ──────────────────────────────────────────────────────
+
+        public ObservableCollection<string> AccountNames { get; }
+
+        private string _newAccountName = "";
+        public string NewAccountName
+        {
+            get => _newAccountName;
+            set => this.RaiseAndSetIfChanged(ref _newAccountName, value);
+        }
 
         // ── Read-only info ─────────────────────────────────────────────────────
 
@@ -37,6 +215,8 @@ namespace Microsoft.Vault.Explorer.ViewModels
         public ReactiveCommand<Unit, Unit> OpenInstallFolderCommand { get; }
         public ReactiveCommand<Unit, Unit> OpenSettingsFolderCommand { get; }
         public ReactiveCommand<Unit, Unit> ClearTokenCacheCommand { get; }
+        public ReactiveCommand<Unit, Unit> AddAccountCommand { get; }
+        public ReactiveCommand<string, Unit> RemoveAccountCommand { get; }
 
         // ── Dirty tracking ─────────────────────────────────────────────────────
 
@@ -44,37 +224,88 @@ namespace Microsoft.Vault.Explorer.ViewModels
         public bool IsDirty
         {
             get => _isDirty;
-            private set => this.RaiseAndSetIfChanged(ref _isDirty, value);
+            set => this.RaiseAndSetIfChanged(ref _isDirty, value);
         }
+
+        // ── Constructor ────────────────────────────────────────────────────────
 
         public SettingsViewModel()
         {
-            // Mark dirty whenever any property on the editable copy changes
-            EditCopy.PropertyChanged += (_, _) =>
+            var src = AppSettings.Default;
+
+            // Initialise dropdown selections from saved settings
+            _selectedTheme = ThemeOptions.FirstOrDefault(t => t.Name == src.Theme)
+                             ?? ThemeOptions[0];
+
+            _selectedClipboardDelay = ClipboardDelayOptions
+                .FirstOrDefault(o => o.Value == src.CopyToClipboardTimeToLive)
+                ?? ClipboardDelayOptions.First(o => o.Label == "1 minute");
+
+            var expiryMatch = ExpiryWarningOptions
+                .FirstOrDefault(o => o.Value == src.AboutToExpireWarningPeriod);
+            if (expiryMatch != null)
             {
-                IsDirty = true;
-                // Apply theme immediately so the user sees the effect without restarting
-                if (Avalonia.Application.Current != null)
-                    Avalonia.Application.Current.RequestedThemeVariant = EditCopy.ThemeVariant;
-            };
+                _selectedExpiryWarning = expiryMatch;
+            }
+            else
+            {
+                _selectedExpiryWarning = ExpiryWarningOptions.First(o => o.IsCustom);
+                _customExpiryDays = (int)src.AboutToExpireWarningPeriod.TotalDays;
+            }
+
+            _selectedExpiredColor = StatusColorOptions
+                .FirstOrDefault(c => string.Equals(c.Label, src.ExpiredItemColor, StringComparison.OrdinalIgnoreCase))
+                ?? StatusColorOptions.First(c => c.Label == "Red");
+
+            _selectedExpiringColor = StatusColorOptions
+                .FirstOrDefault(c => string.Equals(c.Label, src.AboutToExpireItemColor, StringComparison.OrdinalIgnoreCase))
+                ?? StatusColorOptions.First(c => c.Label == "Orange");
+
+            _selectedDisabledColor = StatusColorOptions
+                .FirstOrDefault(c => string.Equals(c.Label, src.DisabledItemColor, StringComparison.OrdinalIgnoreCase))
+                ?? StatusColorOptions.First(c => c.Label == "Gray");
+
+            AccountNames = new ObservableCollection<string>(src.UserAccountNamesList);
 
             var canSave = this.WhenAnyValue(x => x.IsDirty);
-
             SaveCommand = ReactiveCommand.Create(Save, canSave);
 
-            OpenGitHubCommand = ReactiveCommand.Create(
-                () => OpenUrl(Globals.GitHubUrl));
-
-            OpenFeedbackCommand = ReactiveCommand.Create(
-                () => OpenUrl(Globals.GitHubIssuesUrl));
-
-            OpenInstallFolderCommand = ReactiveCommand.Create(
-                () => OpenFolder(AppContext.BaseDirectory));
-
+            OpenGitHubCommand    = ReactiveCommand.Create(() => OpenUrl(Globals.GitHubUrl));
+            OpenFeedbackCommand  = ReactiveCommand.Create(() => OpenUrl(Globals.GitHubIssuesUrl));
+            OpenInstallFolderCommand  = ReactiveCommand.Create(() => OpenFolder(AppContext.BaseDirectory));
             OpenSettingsFolderCommand = ReactiveCommand.Create(
                 () => OpenFolder(Path.GetDirectoryName(AppSettings.SettingsFilePath)!));
 
             ClearTokenCacheCommand = ReactiveCommand.CreateFromTask(ClearTokenCacheAsync);
+
+            var canAddAccount = this.WhenAnyValue(
+                x => x.NewAccountName,
+                name => !string.IsNullOrWhiteSpace(name) && !AccountNames.Contains(name.Trim()));
+            AddAccountCommand = ReactiveCommand.Create(AddAccount, canAddAccount);
+            RemoveAccountCommand = ReactiveCommand.Create<string>(RemoveAccount);
+        }
+
+        // ── Private helpers ────────────────────────────────────────────────────
+
+        private void AddAccount()
+        {
+            var name = NewAccountName.Trim();
+            if (string.IsNullOrEmpty(name) || AccountNames.Contains(name)) return;
+            AccountNames.Add(name);
+            NewAccountName = "";
+            SyncAccountsToEditCopy();
+        }
+
+        private void RemoveAccount(string name)
+        {
+            AccountNames.Remove(name);
+            SyncAccountsToEditCopy();
+        }
+
+        private void SyncAccountsToEditCopy()
+        {
+            EditCopy.UserAccountNames = string.Join("\n", AccountNames);
+            IsDirty = true;
         }
 
         private async Task ClearTokenCacheAsync()
@@ -88,34 +319,31 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         private void Save()
         {
-            // Copy edited values back to the singleton and persist
             var target = AppSettings.Default;
             target.CopyFrom(EditCopy);
+            target.UserAccountNames = string.Join("\n", AccountNames);
             target.Save();
             IsDirty = false;
         }
 
-        // ── Static helpers ─────────────────────────────────────────────────────
-
         private static AppSettings CloneSettings()
         {
-            // Shallow-clone the current settings so the editor works on a copy
             var src = AppSettings.Default;
             return new AppSettings
             {
-                Theme = src.Theme,
-                CopyToClipboardTimeToLive = src.CopyToClipboardTimeToLive,
-                AboutToExpireWarningPeriod = src.AboutToExpireWarningPeriod,
-                AboutToExpireItemColor = src.AboutToExpireItemColor,
-                ExpiredItemColor = src.ExpiredItemColor,
-                DisabledItemColor = src.DisabledItemColor,
-                JsonConfigurationFilesRoot = src.JsonConfigurationFilesRoot,
-                VaultsJsonFileLocation = src.VaultsJsonFileLocation,
+                Theme                       = src.Theme,
+                CopyToClipboardTimeToLive   = src.CopyToClipboardTimeToLive,
+                AboutToExpireWarningPeriod  = src.AboutToExpireWarningPeriod,
+                AboutToExpireItemColor      = src.AboutToExpireItemColor,
+                ExpiredItemColor            = src.ExpiredItemColor,
+                DisabledItemColor           = src.DisabledItemColor,
+                JsonConfigurationFilesRoot  = src.JsonConfigurationFilesRoot,
+                VaultsJsonFileLocation      = src.VaultsJsonFileLocation,
                 VaultAliasesJsonFileLocation = src.VaultAliasesJsonFileLocation,
                 SecretKindsJsonFileLocation = src.SecretKindsJsonFileLocation,
-                CustomTagsJsonFileLocation = src.CustomTagsJsonFileLocation,
-                UserAccountNames = src.UserAccountNames,
-                LastUsedVaultAlias = src.LastUsedVaultAlias,
+                CustomTagsJsonFileLocation  = src.CustomTagsJsonFileLocation,
+                UserAccountNames            = src.UserAccountNames,
+                LastUsedVaultAlias          = src.LastUsedVaultAlias,
             };
         }
 

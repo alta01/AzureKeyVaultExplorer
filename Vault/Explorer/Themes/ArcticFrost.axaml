@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Sentinel key so App.axaml.cs can identify and swap this dictionary -->
+  <x:Boolean x:Key="__VaultTheme__">True</x:Boolean>
+
+  <!-- Arctic Frost — cool crisp light theme for healthcare / clean tech
+       Base: Crisp White #fafafa  |  Accent: Steel Blue #4a6fa5  |  Mid: Ice Blue #d4e4f7  |  Metal: Silver #c0c0c0 -->
+  <Color x:Key="SystemAccentColor">#4a6fa5</Color>
+  <Color x:Key="SystemAccentColorLight1">#5d83b8</Color>
+  <Color x:Key="SystemAccentColorLight2">#7699c8</Color>
+  <Color x:Key="SystemAccentColorLight3">#93b1d8</Color>
+  <Color x:Key="SystemAccentColorDark1">#375890</Color>
+  <Color x:Key="SystemAccentColorDark2">#264478</Color>
+  <Color x:Key="SystemAccentColorDark3">#172e58</Color>
+
+  <!-- Vault item status colors -->
+  <SolidColorBrush x:Key="VaultExpiredBrush"     Color="#c0392b"/>
+  <SolidColorBrush x:Key="VaultExpiringSoonBrush" Color="#d27e00"/>
+  <SolidColorBrush x:Key="VaultDisabledBrush"     Color="#8899aa"/>
+</ResourceDictionary>

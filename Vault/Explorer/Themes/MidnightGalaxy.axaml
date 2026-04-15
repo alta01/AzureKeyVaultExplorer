@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Sentinel key so App.axaml.cs can identify and swap this dictionary -->
+  <x:Boolean x:Key="__VaultTheme__">True</x:Boolean>
+
+  <!-- Midnight Galaxy — dramatic cosmic dark theme
+       Base: Deep Purple #2b1e3e  |  Accent: Cosmic Blue #4a4e8f  |  Mid: Lavender #a490c2  |  Text: Silver #e6e6fa -->
+  <Color x:Key="SystemAccentColor">#4a4e8f</Color>
+  <Color x:Key="SystemAccentColorLight1">#5f63a4</Color>
+  <Color x:Key="SystemAccentColorLight2">#7579b8</Color>
+  <Color x:Key="SystemAccentColorLight3">#8e92ca</Color>
+  <Color x:Key="SystemAccentColorDark1">#363a7a</Color>
+  <Color x:Key="SystemAccentColorDark2">#252862</Color>
+  <Color x:Key="SystemAccentColorDark3">#161848</Color>
+
+  <!-- Vault item status colors -->
+  <SolidColorBrush x:Key="VaultExpiredBrush"     Color="#e05580"/>
+  <SolidColorBrush x:Key="VaultExpiringSoonBrush" Color="#d4a017"/>
+  <SolidColorBrush x:Key="VaultDisabledBrush"     Color="#7070a0"/>
+</ResourceDictionary>

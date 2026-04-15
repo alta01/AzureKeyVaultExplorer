@@ -37,81 +37,57 @@ public sealed class AppSettings : INotifyPropertyChanged
 
     // ── Appearance ───────────────────────────────────────────────────────────
 
-    [Category("Appearance")]
-    [DisplayName("Theme")]
-    [Description("Color theme: 'Dark' or 'Light'. Takes effect immediately when changed in Settings.")]
+    [Browsable(false)]
     [JsonProperty]
-    public string Theme { get; set; } = "Dark";
+    public string Theme { get; set; } = "Ocean Depths";
 
     // ── General ──────────────────────────────────────────────────────────────
 
-    [Category("General")]
-    [DisplayName("Clipboard Clear Delay")]
-    [Description("How long a copied secret value stays in the clipboard before being automatically cleared. Default: 30 seconds. Format: hh:mm:ss")]
+    [Browsable(false)]
     [JsonProperty]
-    public TimeSpan CopyToClipboardTimeToLive { get; set; } = TimeSpan.FromSeconds(30);
+    public TimeSpan CopyToClipboardTimeToLive { get; set; } = TimeSpan.FromMinutes(1);
 
-    [Category("General")]
-    [DisplayName("Expiry Warning Period")]
-    [Description("How far in advance an item is highlighted as 'about to expire'. Default: 14 days. Format: d.hh:mm:ss")]
+    [Browsable(false)]
     [JsonProperty]
-    public TimeSpan AboutToExpireWarningPeriod { get; set; } = TimeSpan.FromDays(14);
+    public TimeSpan AboutToExpireWarningPeriod { get; set; } = TimeSpan.FromHours(24);
 
-    [Category("General")]
-    [DisplayName("Expiring Item Color")]
-    [Description("Row highlight color for secrets/certificates that will expire within the warning period. Examples: Orange, Yellow, Gold.")]
+    [Browsable(false)]
     [JsonProperty]
     public string AboutToExpireItemColor { get; set; } = "Orange";
 
-    [Category("General")]
-    [DisplayName("Expired Item Color")]
-    [Description("Row highlight color for secrets/certificates that have already expired or are not yet active. Examples: Red, Crimson.")]
+    [Browsable(false)]
     [JsonProperty]
     public string ExpiredItemColor { get; set; } = "Red";
 
-    [Category("General")]
-    [DisplayName("Disabled Item Color")]
-    [Description("Row highlight color for secrets/certificates that have been explicitly disabled in Key Vault. Examples: DarkGray, Gray.")]
+    [Browsable(false)]
     [JsonProperty]
     public string DisabledItemColor { get; set; } = "DarkGray";
 
     // ── Vault configuration files ────────────────────────────────────────────
 
-    [Category("Vault Configuration")]
-    [DisplayName("Config Files Root Folder")]
-    [Description("Folder that contains all vault configuration JSON files (Vaults.json, VaultAliases.json, etc.). Leave empty to use the default app data folder. Open Settings Folder in About tab to locate it.")]
+    [Browsable(false)]
     [JsonProperty]
     public string JsonConfigurationFilesRoot { get; set; } = "";
 
-    [Category("Vault Configuration")]
-    [DisplayName("Vaults File")]
-    [Description("File name (relative to Config Root) for the Vaults.json file that defines Azure Key Vault connection details: vault name, subscription, resource group, and tenant. Default: Vaults.json")]
+    [Browsable(false)]
     [JsonProperty]
     public string VaultsJsonFileLocation { get; set; } = "Vaults.json";
 
-    [Category("Vault Configuration")]
-    [DisplayName("Vault Aliases File")]
-    [Description("File name (relative to Config Root) for VaultAliases.json. Each entry in this file creates a named shortcut in the Vault dropdown on the main window. Add entries here to add new vaults. Default: VaultAliases.json")]
+    [Browsable(false)]
     [JsonProperty]
     public string VaultAliasesJsonFileLocation { get; set; } = "VaultAliases.json";
 
-    [Category("Vault Configuration")]
-    [DisplayName("Secret Kinds File")]
-    [Description("File name (relative to Config Root) for SecretKinds.json. Defines custom secret type templates that appear in the secret editor dropdown. Default: SecretKinds.json")]
+    [Browsable(false)]
     [JsonProperty]
     public string SecretKindsJsonFileLocation { get; set; } = "SecretKinds.json";
 
-    [Category("Vault Configuration")]
-    [DisplayName("Custom Tags File")]
-    [Description("File name (relative to Config Root) for CustomTags.json. Defines suggested tag key/value pairs shown in the tag editor. Default: CustomTags.json")]
+    [Browsable(false)]
     [JsonProperty]
     public string CustomTagsJsonFileLocation { get; set; } = "CustomTags.json";
 
     // ── Accounts ─────────────────────────────────────────────────────────────
 
-    [Category("Accounts")]
-    [DisplayName("Azure Account Names")]
-    [Description("One Azure account per line (e.g. user@contoso.com). These are shown in the Subscriptions Manager when picking a vault from a subscription. Add your account here before using 'Pick vault from subscription'.")]
+    [Browsable(false)]
     [JsonProperty]
     public string UserAccountNames { get; set; } = "";
 
@@ -196,11 +172,11 @@ public sealed class AppSettings : INotifyPropertyChanged
         LastUsedVaultAlias = src.LastUsedVaultAlias;
     }
 
-    /// <summary>Converts Theme string to Avalonia ThemeVariant.</summary>
+    /// <summary>Converts Theme name to Avalonia ThemeVariant (light/dark base).</summary>
     [Browsable(false)]
     [JsonIgnore]
     public ThemeVariant ThemeVariant =>
-        string.Equals(Theme, "Light", StringComparison.OrdinalIgnoreCase)
+        Theme is "Modern Minimalist" or "Arctic Frost"
             ? ThemeVariant.Light
             : ThemeVariant.Dark;
 }

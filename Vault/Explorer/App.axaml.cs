@@ -2,10 +2,13 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Vault.Explorer.Services;
@@ -29,8 +32,8 @@ public partial class App : Application
         ConfigureServices(services);
         Services = services.BuildServiceProvider();
 
-        // Apply saved theme before the window opens
-        RequestedThemeVariant = AppSettings.Default.ThemeVariant;
+        // Apply saved theme (accent colors + light/dark variant) before window opens
+        ApplyTheme(AppSettings.Default.Theme);
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -41,6 +44,40 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Swaps the active theme ResourceDictionary and sets the Fluent light/dark base.
+    /// Safe to call at any time (including from SettingsViewModel for live preview).
+    /// </summary>
+    public static void ApplyTheme(string themeName)
+    {
+        if (Current == null) return;
+
+        var fileName = themeName switch
+        {
+            "Ocean Depths"       => "OceanDepths",
+            "Modern Minimalist"  => "ModernMinimalist",
+            "Arctic Frost"       => "ArcticFrost",
+            "Midnight Galaxy"    => "MidnightGalaxy",
+            _                    => "OceanDepths"
+        };
+
+        var uri = new Uri($"avares://VaultExplorer/Themes/{fileName}.axaml");
+        var themeDict = (Avalonia.Controls.ResourceDictionary)AvaloniaXamlLoader.Load(uri);
+
+        // Remove any previously applied vault theme dict (identified by sentinel key)
+        var merged = Current.Resources.MergedDictionaries;
+        var old = merged.OfType<Avalonia.Controls.ResourceDictionary>()
+                        .Where(d => d.ContainsKey("__VaultTheme__"))
+                        .ToList();
+        foreach (var d in old) merged.Remove(d);
+        merged.Add(themeDict);
+
+        // Set Fluent light/dark base to match theme
+        Current.RequestedThemeVariant = themeName is "Modern Minimalist" or "Arctic Frost"
+            ? ThemeVariant.Light
+            : ThemeVariant.Dark;
     }
 
     private static void ConfigureServices(IServiceCollection services)

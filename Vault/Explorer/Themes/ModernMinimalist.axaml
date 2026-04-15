@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Sentinel key so App.axaml.cs can identify and swap this dictionary -->
+  <x:Boolean x:Key="__VaultTheme__">True</x:Boolean>
+
+  <!-- Modern Minimalist — clean contemporary light theme
+       Base: White #ffffff  |  Accent: Slate Gray #708090  |  Mid: Light Gray #d3d3d3  |  Dark: Charcoal #36454f -->
+  <Color x:Key="SystemAccentColor">#708090</Color>
+  <Color x:Key="SystemAccentColorLight1">#8496a6</Color>
+  <Color x:Key="SystemAccentColorLight2">#9aacbb</Color>
+  <Color x:Key="SystemAccentColorLight3">#b2c2cf</Color>
+  <Color x:Key="SystemAccentColorDark1">#586878</Color>
+  <Color x:Key="SystemAccentColorDark2">#445260</Color>
+  <Color x:Key="SystemAccentColorDark3">#2e3c48</Color>
+
+  <!-- Vault item status colors -->
+  <SolidColorBrush x:Key="VaultExpiredBrush"     Color="#c0392b"/>
+  <SolidColorBrush x:Key="VaultExpiringSoonBrush" Color="#d68910"/>
+  <SolidColorBrush x:Key="VaultDisabledBrush"     Color="#808080"/>
+</ResourceDictionary>

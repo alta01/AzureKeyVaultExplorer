@@ -81,6 +81,7 @@
   <!-- ── Icon assets ─────────────────────────────────────────────────────── -->
   <ItemGroup>
     <AvaloniaResource Include="Resources\**" />
+    <AvaloniaResource Include="Themes\**" />
   </ItemGroup>
 
   <!-- ── Static content ───────────────────────────────────────────────────── -->
