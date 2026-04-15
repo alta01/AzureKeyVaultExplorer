@@ -1,385 +1,259 @@
-# ![bigKey](./Screenshots/Key64x64.png) Azure Key Vault Explorer
+# Azure Key Vault Explorer
 
-**NOTE: This repository is a fork of [reysic/AzureKeyVaultExplorer](https://github.com/reysic/AzureKeyVaultExplorer), which itself originated from [microsoft/AzureKeyVaultExplorer](https://github.com/microsoft/AzureKeyVaultExplorer). This fork is community-maintained and includes updates developed with GitHub Copilot assistance.**
+**Cross-platform desktop app for browsing, editing, and managing Azure Key Vault secrets, keys, and certificates — now powered by Avalonia UI.**
 
-Azure Key Vault Explorer - be productive when working with secrets!
+> This repository is a fork of [reysic/AzureKeyVaultExplorer](https://github.com/reysic/AzureKeyVaultExplorer), which originated from [microsoft/AzureKeyVaultExplorer](https://github.com/microsoft/AzureKeyVaultExplorer).
 
-**[Click here to install the latest version (VaultExplorer.application)](https://reysic.github.io/AzureKeyVaultExplorer/VaultExplorer.application)**
+Original Authors: Eli Zeitlin, Gokhan Ozhan, Anna Zeitlin
 
-If the install link does not load yet, enable **GitHub Pages** in this fork (`Settings -> Pages`) and publish from the branch that contains this repository.
-
-Original Authors: Eli Zeitlin, Gokhan Ozhan, Anna Zeitlin  
-Current Authors: [reysic](https://github.com/reysic), [softworkz](https://github.com/softworkz)  
-Contact: Submit issues/PRs on this repo
+---
 
 ## Table of Contents
 
 * [Key features](#key-features)
-* [How to add or open new vaults](#how-to-add-or-open-new-vaults)
-* [Keyboard and mouse shortcuts](#keyboard-and-mouse-shortcuts)
+* [Getting started](#getting-started)
+* [How to add or open vaults](#how-to-add-or-open-vaults)
+* [Keyboard shortcuts](#keyboard-shortcuts)
 * [Configuration](#configuration)
   * [Vaults.json](#vaultsjson)
   * [SecretKinds.json](#secretkindsjson)
   * [CustomTags.json](#customtagsjson)
   * [VaultAliases.json](#vaultaliasesjson)
-  * [User.config](#userconfig)
-* [Telemetry](#telemetry)
-* [Screen shots](#screen-shots)
-  * [Main window](#main-window)
-  * [Search and copy secret to clipboard](#search-and-copy-secret-to-clipboard)
-  * [Edit secret](#edit-secret)
-  * [Rollback to specific secret version](#rollback-to-specific-secret-version)
-  * [Edit secret tags](#edit-secret-tags)
-  * [Edit Key Vault certificate](#edit-key-vault-certificate)
-  * [Settings window](#settings-window)
+  * [Settings file](#settings-file)
+* [Themes](#themes)
 * [Contributing](#contributing)
+  * [Building](#building)
   * [TODOs](#todos)
 
-## Recent Updates
-
-* **Tenant selector and account flow improvements**
-  * Sign in first, then select tenant from discovered tenants before loading subscriptions.
-  * Added support for saved accounts with known tenants and selectable default tenant behavior.
-  * Reduced duplicate login prompts in common account/tenant switch flows.
-* **Subscription vault selection improvements**
-  * Better handling for "Pick vault from subscription..." and immediate vault activation after selecting a vault.
-  * Improved quick switching behavior with persisted last selected vault.
-  * Added clearer onboarding/error messages when no accounts or subscriptions are configured yet.
-* **Platform/runtime modernization**
-  * Migrated Windows projects to **.NET 10** target frameworks.
-  * Updated build compatibility for current `dotnet` tooling and maintained vulnerability-clean package baseline.
-* **Release and deployment hardening**
-  * ClickOnce release workflow is configured in `.github/workflows/release.yml` and uses `release.ps1`.
-  * Release docs are now fork-specific and include tag-driven publish steps (`release.md`).
-* **Deprecated package validation status**
-  * Deprecated package scan was re-run and confirms legacy Azure SDK packages are still present.
-  * Migration to non-deprecated Azure SDK Track 2 packages remains an open refactor backlog item.
+---
 
 ## Key features
 
-* Best user experience for authentication, you will be prompted at most *once* to enter your credentials
-* All types of authentications are supported: Certificate, Secret and User based with 2FA (including PHX or GME)
-* One click activation, just run this: `https://reysic.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
-* Support single or dual vaults
-* Upload and download certificate (.pfx, .p12 and .cer) files
-* Import and export certificates to user or machine stores in just few clicks
-* Support both secret based certitifactes and new Azure Key Vault Certificates, for more details see here:  <http://aka.ms/kvssl>
-* Secret compression, to allow secrets which are bigger than 25 KB limit
-* Drag and Drop of certificates and secrets to / from Windows Explorer or another instance of Vault Explorer
-* Copy secret to clipboard for a configurable short time, just hit Ctrl + C
-* Share certificate or secret in a safely manner, by copying link (Ctrl + Shift + C) to the item and pasting it anywhere (email, IM, desktop, etc.)
-* Export all or selected items to .tsv file for future analysis or reporting
+* **Cross-platform** — runs on Windows, macOS, and Linux (net10.0 / Avalonia UI 11)
+* **Vault tabs** — open multiple vaults simultaneously and switch between them instantly
+* **Pre-connection check** — verifies vault network accessibility and permissions before connecting
+* **Material Design icons** — crisp vector icons at any DPI (Material.Icons.Avalonia)
+* **4 built-in themes** — Arctic Frost (light default), Ocean Depths, Modern Minimalist, Midnight Galaxy; live preview in Settings
+* Single sign-on via system browser (MSAL v4); prompted at most once per session
+* Supports certificate, client-credential, and interactive user authentication
+* Single or dual-vault HA/DR configuration
+* Upload and download certificate (.pfx, .p12, .cer) files
+* Drag-and-drop secrets and certificates into the vault list
+* Copy secret to clipboard with auto-clear after a configurable delay
+* Copy as environment variable, Docker `--env`, or Kubernetes YAML block
+* Export all or selected items to TSV
 * Favorite items per vault
-* Explore your vaults and access policy from your subscriptions
-* Open PowerShell session with currently selected vaults and quickly automate things
-* Fast regex based search to quickly find the secret by any metadata
-* Customizable regex based secret kinds to verify secret name and value and auto extract non-secret info to Tags, plus guide use with secret value template
-* Custom required and optional tags per secret
-* Custom tags as columns in the list view (Right click on columns header bar)
-* Syntax highlight for well-known formats, such as: json, xml, config
-* Build it auditing for all operations
-* Disable or expiry item in a click of a button
-* Default and maximum expiration per seceret kind and different coloring based on expiration period left
-* Certificate and secret revision control, rollback to previous value with just a click
-* Quickly detects duplication of secrets
-* Generate secure password, new guid or new api key as a secret value with single click
-* Usage telemetry and diagnostic instrumentation
-* Auto update of the bits
+* Browse vaults from your Azure subscriptions (ARM)
+* Fast regex-based search / filter
+* Customizable secret kinds with regex validation and tag schemas
+* Secret and certificate revision history with one-click rollback
+* Disable / expire items in one click
+* Color-coded expiry warnings (configurable thresholds)
 
-## How to add or open new vaults
+---
 
-There are 4 ways how you can make Vault Explorer to work with your vaults:
+## Getting started
 
-1. In case Vault Explorer is not installed on the box, you may just run: `reysic.github.io/AzureKeyVaultExplorer?vault://[ENTER HERE YOUR VAULT NAME]`
-2. In case Vault Explorer already installed on the box, you can just hit Win+R type `vault://[ENTER HERE YOUR VAULT NAME]` and hit Enter
-    * Note: The above two methods do **NOT** allow for alternative account login  
-3. Run Vault Explorer, open vault combo box, select last item "Pick vault from subscription..."  
-4. Below is *the recommended way*, as it gives you a full control around vaults, aliases, access and secret kinds.  
-Just complete the below fairly easy manual steps *once*:
+### Requirements
 
-* Run Vault Explorer
-* Click on Settings, then go to About tab, and hit Install Location.
-* Copy Vaults.json, SecretKinds.json, CustomTags.json and VaultAliases.json (see below in the Configuration section what these files are)
-* Put all four files in some local folder let say "C:\Users\<YourAlias>\My Documents\VaultExplorerConfig\" or some share folder which will be accessible to your team
-* Edit each file accordingly, read the Configuration section below
-* Go back to Options tab in the Settings dialog, and change "Root location" from .\ to point to where you put all four files
-* Hit OK button
+| | |
+|---|---|
+| Runtime | [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| Platforms | Windows 10+, macOS 12+, Linux (X11 or Wayland) |
 
-## Keyboard and mouse shortcuts
+### Run from source
 
-* Drag with Left mouse button - initiate drag & drop operation with *basic* item information (name and value only)
-* Drag with Ctrl + Left mouse button - initiate drag & drop operation with *all* item information (name, value, tags, attributes)
-* Drag with Ctrl + Shift + Left mouse button - initiate drag & drop operation as a link to the item (also known as shortcut)
-* F1 - open help
-* F5 - refresh list
-* Insert - add new item
-* Delete - delete item(s)
-* Enter - edit item
-* Ctrl + A - select all items
-* Ctrl + C - copy item value to clipboard for some time (configurable)
-* Ctrl + Shift + C - copy link to the selected item in the following format: `https://reysic.github.io/AzureKeyVaultExplorer?vault://vaultName/collection/itemName/version`
-* Ctrl + D - add item to favorites / remove item from favorites
-* Ctrl + E - edit item
-* Ctrl + F - find items
-* Ctrl + R - refresh list
-* Ctrl + S - save item to file
+```bash
+git clone https://github.com/alta01/AzureKeyVaultExplorer.git
+cd AzureKeyVaultExplorer
+dotnet run --project Vault/Explorer/VaultExplorer.csproj
+```
+
+### Build a self-contained executable
+
+```bash
+# Linux x64
+dotnet publish Vault/Explorer/VaultExplorer.csproj \
+  -c Release -r linux-x64 --self-contained -o dist/linux-x64
+
+# Windows x64
+dotnet publish Vault/Explorer/VaultExplorer.csproj \
+  -c Release -r win-x64 --self-contained -o dist/win-x64
+
+# macOS arm64 (Apple Silicon)
+dotnet publish Vault/Explorer/VaultExplorer.csproj \
+  -c Release -r osx-arm64 --self-contained -o dist/osx-arm64
+```
+
+---
+
+## How to add or open vaults
+
+There are two ways to connect to a vault:
+
+**1. Pick from subscription (recommended for new users)**
+
+Open the vault dropdown at the top of the main window and select **"Pick vault from subscription..."**. Sign in with your Azure account, choose a subscription, and select a vault. The app will run a quick connectivity check before enabling OK.
+
+**2. VaultAliases.json (recommended for teams)**
+
+Define named vault aliases in a `VaultAliases.json` file and point Settings to its folder. This gives full control over vault access credentials, secret kinds, and dual-vault HA setups. See [VaultAliases.json](#vaultaliasesjson) below.
+
+---
+
+## Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| F5 | Refresh vault |
+| Delete | Delete selected item(s) |
+| Enter | Edit selected item |
+| Ctrl+F | Focus search box |
+| Ctrl+C | Copy value to clipboard |
+
+---
 
 ## Configuration
 
-There are five configuration files which controls Vault Explorer behaviour.
+Settings are stored in JSON format at:
+
+| Platform | Path |
+|----------|------|
+| Linux / macOS | `~/.config/VaultExplorerNext/settings.json` |
+| Windows | `%APPDATA%\VaultExplorerNext\settings.json` |
+
+Vault configuration files are read from the **JSON configuration files root** path set in Settings (default: app directory).
 
 ### Vaults.json
 
-Defines a dictionary of vault names and how access is gained. This is especially useful if the account that is running Vault Explorer does not have access to certain vaults. Customize this file to add credentials for specific vaults. Otherwise, editing this file is optional if the current account has access to the specified vault. Vault names are used later in *VaultAliases.json*. Vault Explorer uses only *ReadWrite* access. Supported Vault Access types are:
+Defines vault credentials. Optional if your current account already has access. Supports three access types:
 
-* VaultAccessClientCertificate - client id (application id) in AzureAD will be selected with right certificate thumbprint (sha1) of the application's principal to get the access
-* VaultAccessClientCredential - client id and client secret will be used to get the access
-* VaultAccessUserInteractive - client id (powershell app id) and user credentials will be used to get the access. By default `[your alias]@microsoft.com` is used, in case you would like to use another domain (for example gme.gbl), just add the key `"DomainHint": "gme.gbl"`, if you would like to use an alternate account to login, add the key `"UserAliasType": "Alt"`
+* `VaultAccessClientCertificate` — authenticates with a certificate thumbprint
+* `VaultAccessClientCredential` — authenticates with a client secret
+* `VaultAccessUserInteractive` — authenticates via browser (default)
 
-In case of dual vaults (primary and secondary) use $id and $ref to avoid duplication. Here an example for dual vault configuration.
+Use `$id` / `$ref` for dual-vault HA configurations:
 
 ```json
 {
   "myVault": {
     "$id": "1",
-    "ReadOnly": [
-      {
-        "$type": "Microsoft.Vault.Library.VaultAccessClientCertificate, Microsoft.Vault.Library",
-        "ClientId": "00000000-0000-0000-aaaa-aaaaaaaaaaaa",
-    "CertificateThumbprint": "0000000000000000000000000000000000000000"
-      }
-    ],
+    "ReadOnly": [],
     "ReadWrite": [
       {
-        "$type": "Microsoft.Vault.Library.Vault.VaultAccessClientCertificate, Microsoft.Vault.Library",
-        "ClientId": "00000000-0000-0000-aaaa-aaaaaaaaaaaa",
-        "CertificateThumbprint": "0000000000000000000000000000000000000000"
-      },
-      {
-        "$type": "Microsoft.Vault.Library.VaultAccessClientCredential, Microsoft.Vault.Library",
-        "ClientId": "00000000-0000-0000-aaaa-aaaaaaaaaaaa",
-        "ClientSecret": "aXRoIEJhc2U2NCBmb3Jtsdfsdf5534YXQ/IFRoZW4="
-      },
-      {
         "$type": "Microsoft.Vault.Library.VaultAccessUserInteractive, Microsoft.Vault.Library",
-        "DomainHint": "xxx.yyy",
-        "UserAliasType": "Alt" 
+        "DomainHint": "contoso.com"
       }
     ]
   },
-  "myVault": {
-    "$ref": "1"
-  }
+  "myVault-dr": { "$ref": "1" }
 }
 ```
 
 ### VaultAliases.json
 
-Defines a list of vault aliases that can be used to quickly access certain vaults. VaultNames do not need to be defined in *Vaults.json*. Each vault alias is a simple class with the following properties:
-
-* Alias - nice alias for the vault(s)
-* VaultNames - array with single or dual vault names that may be defined in *Vaults.json*, specifying the vault in *Vaults.json* is not required if the current account has access to the vault(s).
-* SecretKinds - array with at least one secret kind which are defined in *SecretKinds.json*, this controls which secret kinds are allowed for the vault(s)
-
-Here an example for vault alias element in the array:
+Named aliases shown in the main vault dropdown:
 
 ```json
+[
   {
-    "Alias": "Test Alias",
-    "VaultNames": [ "myVault1", "myVault2" ],
+    "Alias": "Production",
+    "VaultNames": [ "my-prod-vault" ],
     "SecretKinds": [ "Custom", "Service.Secret" ]
   },
-```
-
-Here is an example of a single vault not defined in *Vaults.json*
-
-```json
   {
-    "Alias": "DEV",
-    "VaultNames": [ "TestKeyVault" ]
+    "Alias": "Production (HA)",
+    "VaultNames": [ "my-prod-vault", "my-prod-vault-dr" ]
   }
+]
 ```
-
-![vaultalises](./Screenshots/VaultAliases.jpg)
 
 ### SecretKinds.json
 
-Defines a dictionary of different secret kinds. Secret kind names can be used in *VaultAliases.json* to limit the types of secrets available in a certain vault. Selecting a Secret Kind will also add a *SecretKind* custom tag to the secret that can be referenced by external programs and scripts. By default, any new Secret is a *Custom* secret and the *SecretKind* tag will not be populated. Secret Kind is a simple class with the following properties:
+Regex-validated secret types with optional tag schemas and expiry defaults. Each kind can define:
 
-* Alias - secret kind alias, presented in the secret kind list in New/Edit secret dialog.
-* Description - secret kind description, used as a tool tip in the secret kind list and link in New/Edit secret dialog.
-* NameRegex - valid secret name regular expression (case sensitive). NameRegex must be a "subset" of the following regex ```^[0-9a-zA-Z-]{1,127}$```
-* ValueRegex - valid secret value regular expression (case sensitive). Each *named group* value will be auto-extracted to appropriate Tag of the secret (tag name will the the group name and tag value will be the matched string in this group). ValueRegex can be longer than 25KB, if one wants to allow secret compression *ContentType = application/x-json-gzb64*
-* ValueTemplate - optional field, which guides the user how the secret should look like. Will be used during new secret flow.
-* RequiredCustomTags - optional field, which contain array of required custom tags that must be present as part of the secret kind, see *CustomTags.json*
-* OptionalCustomTags - optional field, which contain array of optional custom tags that may be present as part of the secret kind, see *CustomTags.json*
-* DefaultExpiration - optional field. Controls default expiration interval for the new secret.
-* MaxExpiration - optional field. Controls maximum allowed expiration interval for the secret.
-
-Here an example for storage account secret kind:
-
-```json
-  "My.StorageAccount": {
-    "Alias": "Storage Account",
-    "Description": "Azure storage account connection string in the following format: DefaultEndpointsProtocol=[http|https];AccountName=<myAccountName>;AccountKey=<myAccountKey>",
-    "NameRegex": "^sa-(?<AccountName>[0-9a-z]{3,24})(?<Region>|-cus|-eus|-eus2|-ugi|-ugv|-ncu|-scu|-wus|-neu|-weu|-eas|-sas|-ejp|-wjp|-sbr|-eau|-sau|-all)$",
-    "ValueRegex": "^DefaultEndpointsProtocol=(http|https);AccountName=(?<AccountName>[0-9a-z]{3,24});AccountKey=((?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?)$",
-    "ValueTemplate": "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...",
-    "RequiredCustomTags": [ "MyTag" ],
-    "OptionalCustomTags": [ "MyOptionalTag" ],
-    "DefaultExpiration": "180.00:00:00",
-    "MaxExpiration":  "180.00:00:00"
-  },
-```
-
-Note: Total number of RequiredCustomTags and OptionalCustomTags must be less than 15 for any secret kind.
-
-![secretkinds](./Screenshots/SecretKinds.jpg)
+* `NameRegex` — valid secret name pattern
+* `ValueRegex` — valid value pattern; named groups are auto-extracted to tags
+* `ValueTemplate` — placeholder shown in the editor
+* `RequiredCustomTags` / `OptionalCustomTags` — references to `CustomTags.json`
+* `DefaultExpiration` / `MaxExpiration` — timespan strings (`"90.00:00:00"` = 90 days)
 
 ### CustomTags.json
 
-Defines a dictionary for different secret custom tags. Custom tags must be added to *SecretKinds.json* in the 'RequiredCustomTags' or 'OptionalCustomTags' sections.
-Each cutom tag is a simple class with the following properties:
-
-* Name - the custom tag name, must be less than 256 chars
-* DefaultValue - default value for the tag, for no value just put ""
-* ValueRegex - valid tag value regular expression (case sensitive), must be no longer 256 chars
-* ValueList - (optional) an array of strings or numbers that will be shown in a dropdown
-
-Here are examples for couple of custom tags:
+Tag definitions referenced by SecretKinds:
 
 ```json
 {
-  "MyTag": {
-    "Name": "Tag",
-    "DefaultValue": "foo",
-    "ValueRegex": ".{0,256}",
-    "ValueList": [
-      "foo",
-      "bar"
-    ]
-  },
-  "MyOptionalTag": {
-    "Name": "Description",
-    "DefaultValue": "",
-    "ValueRegex": ".{0,256}"
+  "Environment": {
+    "Name": "Environment",
+    "DefaultValue": "dev",
+    "ValueRegex": "^(dev|staging|prod)$",
+    "ValueList": ["dev", "staging", "prod"]
   }
 }
 ```
 
-![customtags](./Screenshots/CustomTags.jpg)
+### Settings file
 
-### User.config
+User preferences are saved automatically. Key settings:
 
-XML file which controls user settings, will be created only if user changed the default values via Settings dialog and clicked OK button.
-Here an example for location of the file:
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Theme | Arctic Frost | UI color theme |
+| Copy-to-clipboard TTL | 12 seconds | How long secret stays in clipboard |
+| Expiry warning period | 30 days | When items turn yellow |
+| Expired color | Red | Color for expired items |
+| Expiring soon color | Orange | Color for items near expiry |
+| Disabled color | Gray | Color for disabled items |
+| JSON configuration files root | _(app dir)_ | Folder containing `*.json` config files |
 
-```text
-%LocalAppData%\Apps\2.0\Data\2310EVQO.1C1\Q6P3APKG.HY4\vaul..tion_7446cb71d1187222_07e0.03f5_fc3133cd208276e1\Data\2016.1013.1742.39\user.config
-```
+---
 
-## Telemetry
+## Themes
 
-By default Azure Key Vault Explorer collects and sends aggregated telemetry to Application Insights about usage of the tool. Telemetry includes only the following:
+Four built-in themes, switchable live from **Settings**:
 
-* Type of user actions - which button / menu item was clicked
-* Action duration – how long time particular action took (for example: action to save a secret)
-* Exceptions – only in case action failed, for diagnostic purposes only exception information is collected
+| Theme | Variant | Description |
+|-------|---------|-------------|
+| Arctic Frost | Light | Clean white/blue — the default |
+| Modern Minimalist | Light | Neutral gray, low-chrome |
+| Ocean Depths | Dark | Deep teal/blue |
+| Midnight Galaxy | Dark | Dark purple/indigo |
 
-All collected telemetry is stored for no more than 90 days.
-Telemetry can be disabled in the Settings dialog. Set *Disable telemetry* to *True*, hit *OK* button and restart the application.
-
-## Screen shots
-
-### Main window
-
-![mainwindow](./Screenshots/main1.png)
-
-### Search and copy secret to clipboard
-
-![searchSecretAndCopy](./Screenshots/searchSecretAndCopy.png)
-
-### Edit secret
-
-![editSecret](./Screenshots/editSecret1.png)
-
-### Rollback to specific secret version
-
-![editSecretVersions](./Screenshots/editSecretVersions.png)
-
-### Edit secret tags
-
-![secretTagsEditor](./Screenshots/secretTagsEditor.png)
-
-### Edit Key Vault certificate
-
-![editSecret](./Screenshots/editKVCert1.png)
-
-### Settings window
-
-![settings](./Screenshots/settings.png)
+---
 
 ## Contributing
 
 ### Building
 
-This fork is tested with Visual Studio 2022 and .NET 10 SDK. To build locally:
+Requirements: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). No Visual Studio required.
 
-* Clone this repo
-* Install .NET 10 SDK (`dotnet --list-sdks` should show `10.x`)
-* Run `dotnet build AzureKeyVaultExplorer.sln`
-* Run and test the application from `Vault\Explorer`
+```bash
+# Full solution
+dotnet build AzureKeyVaultExplorer.sln
 
-PRs are welcome!
+# Explorer project only
+dotnet build Vault/Explorer/VaultExplorer.csproj
+```
 
-### Publishing
+The migration from WinForms to Avalonia lives in the PR from `claude/avalonia-migration-effort-pILGp` into this branch (`avalonia-cross-platform`).
 
-See [release.md](./release.md). Following that process triggers [Actions](https://github.com/reysic/AzureKeyVaultExplorer/actions), which run [release.ps1](https://github.com/reysic/AzureKeyVaultExplorer/blob/main/release.ps1).
+### Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| UI | [Avalonia UI 11](https://avaloniaui.net/) + ReactiveUI + DynamicData |
+| MVVM | ReactiveUI (`ReactiveObject`, `ReactiveCommand`) |
+| Icons | Material.Icons.Avalonia 2.1.0 |
+| Auth | Microsoft.Identity.Client (MSAL v4) — system browser OAuth |
+| Azure SDK | Azure.Security.KeyVault.Secrets/Certificates, Azure.ResourceManager.KeyVault |
+| Target | `net10.0` (cross-platform) |
 
 ### TODOs
 
-* Migrate from deprecated packages:
-  * Microsoft.Azure.KeyVault
-  * Microsoft.Azure.KeyVault.WebKey
-  * Microsoft.Azure.Management.KeyVault
-  * Microsoft.IdentityModel.Clients.ActiveDirectory
-  * Microsoft.Rest.ClientRuntime
-  * Microsoft.Rest.ClientRuntime.Azure
-  * Status: Validation completed; migration to non-deprecated replacements is still pending.
-* Setup ClickOnce deployment
-  * Re-establish existing ClickOnce install with new URL - :white_check_mark:
-  * Document release process - :white_check_mark:
-  * Configure ClickOnce deployments for future releases - :white_check_mark:
-* Improve onboarding
-  * Better error messaging if user hasn't configured subscription dialog values - :white_check_mark:
-* Update README.md to reflect latest state - :white_check_mark:
-
-#### softworkz Updates
-
-* Updated to .NET 8 and SDK-style projects with PackageReference
-* Updated authentication from ADAL.NET (deprecated) to Microsoft.Identity.Client (MSAL v4)
-* Removed Telemetry
-* Removed all nuget and other unnecessary scripting
-* Removed PowerShell interface
-  (doesn't work with .net 8; there are official PS modules now)
-* Move all URL strings to a global class
-* All code restructured and reformatted
-* Set up ClickOnce deployment in the net5+ way
-* Remove obsolete settings
-  ("Disable telemetry", Authority, GmeAuthority)
-* **Bug Fixes**
-  * SettingsDialog: Fixed exception when clicking on "User settings location..." after a fresh install
-  * Un-genericalize base forms
-  * Fix launch from ClickOnce URL activation
-  * Fix settings getting lost on update
-* **New Features**
-  * **Zero-Config Start**  
-    No need to prepare json files or enter account names in settings
-  * **Vaults picked from subscription can be saved**  
-    Select vaults from your Azure subscriptions
-  * Existing json configs are still working
-  * **Authentication via OS browser**  
-    instead of embedded window - entering passwords less often
-  * Applied some UI Casmetics
-  * Reduce label column width in PropertyGrids
-  * Add version to PropertyGrid in Secrets dialog
+* Wire up remaining WinForms features not yet in the Avalonia port:
+  * Secret compression (gzip + base64)
+  * `vault://` protocol handler registration (Windows registry / Linux `.desktop`)
+  * PowerShell session launch (was removed upstream, no replacement yet)
+* Add automated UI tests
+* Publish binaries via GitHub Releases
