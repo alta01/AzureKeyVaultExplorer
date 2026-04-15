@@ -43,6 +43,8 @@
     <PackageReference Include="DynamicData" Version="9.0.4" />
     <!-- DI container -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <!-- Cross-platform secret file encryption (replaces Windows-only DPAPI) -->
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="9.0.0" />
   </ItemGroup>
 
   <!-- ── AXAML compilation ─────────────────────────────────────────────────── -->

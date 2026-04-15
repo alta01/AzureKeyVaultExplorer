@@ -1,9 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.IO;
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Vault.Explorer.Services;
 using Microsoft.Vault.Explorer.ViewModels;
@@ -39,6 +42,24 @@ public partial class App : Application
 
     private static void ConfigureServices(IServiceCollection services)
     {
+        // ── Data protection (cross-platform secret file encryption) ───────────
+        var keysDir = new DirectoryInfo(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "AzureKeyVaultExplorer", "DataProtection-Keys"));
+
+        var dpBuilder = services.AddDataProtection()
+            .SetApplicationName("AzureKeyVaultExplorer")
+            .PersistKeysToFileSystem(keysDir);
+
+        // On Windows: additionally protect the key ring with current-user DPAPI
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            dpBuilder.ProtectKeysWithDpapi();
+
+        // Register a named protector for KeyVaultFile use
+        services.AddSingleton<IDataProtector>(sp =>
+            sp.GetRequiredService<IDataProtectionProvider>()
+              .CreateProtector("KeyVaultFile.v1"));
+
         // ── Infrastructure services ───────────────────────────────────────────
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
         services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
