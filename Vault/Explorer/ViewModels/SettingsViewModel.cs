@@ -272,6 +272,12 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
             var canSave = this.WhenAnyValue(x => x.IsDirty);
             SaveCommand = ReactiveCommand.Create(Save, canSave);
+            SaveCommand.ThrownExceptions
+                .Subscribe(async ex =>
+                {
+                    var dialogs = App.Services.GetRequiredService<Services.IDialogService>();
+                    await dialogs.ShowErrorAsync("Save failed", ex.Message, ex);
+                });
 
             OpenGitHubCommand    = ReactiveCommand.Create(() => OpenUrl(Globals.GitHubUrl));
             OpenFeedbackCommand  = ReactiveCommand.Create(() => OpenUrl(Globals.GitHubIssuesUrl));
@@ -338,13 +344,14 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         private static void ValidatePathField(string path, string fieldName)
         {
-            if (string.IsNullOrWhiteSpace(path)) return;  // empty is fine (use default)
-            // Reject path traversal components
+            if (string.IsNullOrWhiteSpace(path)) return;  // empty = use default
+            // Reject path traversal regardless of whether path is absolute or relative
             if (path.Contains(".."))
                 throw new ArgumentException($"{fieldName}: path traversal ('..') is not allowed.");
-            // Must be absolute or empty
-            if (!System.IO.Path.IsPathRooted(path))
-                throw new ArgumentException($"{fieldName}: must be an absolute path.");
+            // Only require absolute path when the value contains a directory separator
+            // (plain filenames like "Vaults.json" are valid relative-to-root defaults)
+            if ((path.Contains('/') || path.Contains('\\')) && !System.IO.Path.IsPathRooted(path))
+                throw new ArgumentException($"{fieldName}: must be an absolute path when a directory is specified.");
         }
 
         private static AppSettings CloneSettings()

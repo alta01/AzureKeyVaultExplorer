@@ -8,6 +8,7 @@ namespace Microsoft.Vault.Library
     using System.Threading;
     using System.Threading.Tasks;
     using Azure.Core;
+    using Azure.Identity;
     using Microsoft.Identity.Client;
 
     /// <summary>
@@ -35,6 +36,22 @@ namespace Microsoft.Vault.Library
 
         public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
         {
+            // Try DefaultAzureCredential first — transparently uses az login, env vars,
+            // managed identity, etc. without requiring an interactive browser flow.
+            try
+            {
+                var azCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+                {
+                    ExcludeInteractiveBrowserCredential = true,
+                    ExcludeVisualStudioCredential = true,
+                    ExcludeVisualStudioCodeCredential = true,
+                });
+                var token = await azCredential.GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false);
+                _onAuthenticated?.Invoke(_userAliasType);
+                return token;
+            }
+            catch { /* fall through to MSAL-based VaultAccess chain */ }
+
             Queue<Exception> exceptions = new Queue<Exception>();
             string vaultAccessTypes = "";
             foreach (VaultAccess va in _vaultAccesses)

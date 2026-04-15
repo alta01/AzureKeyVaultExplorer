@@ -223,6 +223,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
             SettingsCommand = ReactiveCommand.CreateFromTask(OpenSettingsAsync);
             HelpCommand = ReactiveCommand.CreateFromTask(ShowHelpAsync);
             CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.IsBusy));
+            CancelCommand.ThrownExceptions.Subscribe(_ => { /* swallow — Cancel is best-effort */ });
             ExitCommand = ReactiveCommand.Create(() =>
             {
                 if (Avalonia.Application.Current?.ApplicationLifetime
@@ -772,7 +773,11 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         // ── Cancel ─────────────────────────────────────────────────────────────
 
-        private void Cancel() => _cts?.Cancel();
+        private void Cancel()
+        {
+            try { _cts?.Cancel(); }
+            catch (ObjectDisposedException) { /* CTS already disposed — operation already finished */ }
+        }
 
         // ── Helpers ────────────────────────────────────────────────────────────
 
