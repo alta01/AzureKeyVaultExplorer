@@ -8,10 +8,12 @@ namespace Microsoft.Vault.Explorer
 
         public const string AppName = "Azure Key Vault Explorer";
 
-        public const string OnlineActivationUri = "https://reysic.github.io/AzureKeyVaultExplorer/VaultExplorer.application";
-        public const string GitHubUrl = "https://github.com/reysic/AzureKeyVaultExplorer";
-        public const string GitHubIssuesUrl = "https://github.com/reysic/AzureKeyVaultExplorer/issues";
-        public const string ActivationUrl = "https://reysic.github.io/AzureKeyVaultExplorer/VaultExplorer.application";
+        public const string GitHubUrl = "https://github.com/alta01/AzureKeyVaultExplorer";
+        public const string GitHubIssuesUrl = "https://github.com/alta01/AzureKeyVaultExplorer/issues";
+
+        // Legacy vault:// deep-link prefix (no longer used for ClickOnce; kept for URL parsing)
+        public const string OnlineActivationUri = "https://alta01.github.io/AzureKeyVaultExplorer/VaultExplorer.application";
+        public const string ActivationUrl = OnlineActivationUri;
 
         public static string DefaultUserName = Environment.UserName;
     }

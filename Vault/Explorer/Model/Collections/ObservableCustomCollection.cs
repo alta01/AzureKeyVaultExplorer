@@ -9,7 +9,7 @@ namespace Microsoft.Vault.Explorer.Model.Collections
     using System.ComponentModel;
     using System.Linq;
 
-    #region ObservableCustomCollection, ExpandableCollectionObjectConverter and ExpandableCollectionEditor
+    #region ObservableCustomCollection and ExpandableCollectionObjectConverter
 
     /// <summary>
     ///     Simple wrapper on top of ObservableCollection, so we can enforce some validation logic plus register for:

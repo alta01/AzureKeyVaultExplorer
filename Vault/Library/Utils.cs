@@ -20,6 +20,31 @@ namespace Microsoft.Vault.Library
             }
         }
 
+        /// <summary>
+        /// Validates an Azure Key Vault tag key: non-null, non-empty, ≤ 256 characters.
+        /// Azure also prohibits the prefix "microsoft" (reserved), enforced here.
+        /// </summary>
+        public static void GuardTagKey(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentException("Tag key must not be null or empty.", nameof(key));
+            if (key.Length > 256)
+                throw new ArgumentException($"Tag key exceeds the 256-character Azure limit (length={key.Length}).", nameof(key));
+            if (key.StartsWith("microsoft", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Tag keys beginning with 'microsoft' are reserved by Azure.", nameof(key));
+        }
+
+        /// <summary>
+        /// Validates an Azure Key Vault tag value: non-null, ≤ 256 characters.
+        /// </summary>
+        public static void GuardTagValue(string value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value), "Tag value must not be null.");
+            if (value.Length > 256)
+                throw new ArgumentException($"Tag value exceeds the 256-character Azure limit (length={value.Length}).", nameof(value));
+        }
+
         public static Dictionary<string, string> AddMd5ChangedBy(IDictionary<string, string> tags, string value, string changedBy)
         {
             tags = tags ?? new Dictionary<string, string>();

@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Library
 {
     using System;
+    using System.Runtime.InteropServices;
     using System.Security.Cryptography;
     using Microsoft.Identity.Client;
 
@@ -12,39 +13,19 @@ namespace Microsoft.Vault.Library
         private static readonly object BufferLock = new object();
         private static byte[] _buffer;
 
-        /// <summary>
-        ///     Initializes the cache against an in memory buffer.
-        /// </summary>
-        public MemoryTokenCache()
-        {
-        }
+        public MemoryTokenCache() { }
 
-        /// <summary>
-        ///     Empties the persistent store
-        /// </summary>
         public void Clear()
         {
-            lock (BufferLock)
-            {
-                _buffer = null;
-            }
+            lock (BufferLock) { _buffer = null; }
         }
 
-        /// <summary>
-        ///     Configures the token cache for an MSAL client application
-        /// </summary>
-        /// <param name="tokenCache">The MSAL token cache to configure</param>
         public void ConfigureTokenCache(ITokenCache tokenCache)
         {
             tokenCache.SetBeforeAccess(this.BeforeAccessNotification);
             tokenCache.SetAfterAccess(this.AfterAccessNotification);
         }
 
-        /// <summary>
-        ///     Triggered right before MSAL needs to access the cache
-        ///     Reload the cache from the persistent store in case it changed since the last access
-        /// </summary>
-        /// <param name="args"></param>
         private void BeforeAccessNotification(TokenCacheNotificationArgs args)
         {
             lock (BufferLock)
@@ -53,42 +34,44 @@ namespace Microsoft.Vault.Library
                 {
                     try
                     {
-                        byte[] data = ProtectedData.Unprotect(_buffer, null, DataProtectionScope.LocalMachine);
-                        args.TokenCache.DeserializeMsalV3(data);
+                        args.TokenCache.DeserializeMsalV3(Unprotect(_buffer));
                     }
-                    catch (Exception)
+                    catch
                     {
-                        // If decryption fails, clear the cache and start fresh
                         this.Clear();
                     }
                 }
             }
         }
 
-        /// <summary>
-        ///     Triggered right after MSAL accessed the cache
-        /// </summary>
-        /// <param name="args"></param>
         private void AfterAccessNotification(TokenCacheNotificationArgs args)
         {
-            // if the access operation resulted in a cache update
             if (args.HasStateChanged)
             {
                 lock (BufferLock)
                 {
                     try
                     {
-                        // reflect changes in the persistent store
-                        byte[] data = args.TokenCache.SerializeMsalV3();
-                        _buffer = ProtectedData.Protect(data, null, DataProtectionScope.LocalMachine);
+                        _buffer = Protect(args.TokenCache.SerializeMsalV3());
                     }
-                    catch (Exception)
-                    {
-                        // If encryption fails, don't crash the application
-                        // Log the error if logging is available
-                    }
+                    catch { }
                 }
             }
         }
+
+        /// <summary>
+        /// On Windows uses DPAPI (LocalMachine scope) for encryption.
+        /// On macOS / Linux the bytes are stored as-is; the process address space
+        /// provides adequate protection for an in-memory cache.
+        /// </summary>
+        private static byte[] Protect(byte[] data) =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? ProtectedData.Protect(data, null, DataProtectionScope.LocalMachine)
+                : data;
+
+        private static byte[] Unprotect(byte[] data) =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? ProtectedData.Unprotect(data, null, DataProtectionScope.LocalMachine)
+                : data;
     }
 }

@@ -8,6 +8,8 @@ namespace Microsoft.Vault.Explorer.Controls.Lists.Favorites
     [JsonDictionary]
     public class FavoriteSecretsDictionary : Dictionary<string, FavoriteSecrets>
     {
+        public FavoriteSecretsDictionary() : base(StringComparer.CurrentCultureIgnoreCase) { }
+
         [JsonConstructor]
         public FavoriteSecretsDictionary(IDictionary<string, FavoriteSecrets> dictionary) : base(dictionary, StringComparer.CurrentCultureIgnoreCase)
         {

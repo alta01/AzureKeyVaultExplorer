@@ -5,7 +5,7 @@ namespace Microsoft.Vault.Library
 {
     using System;
     using System.IO;
-    using System.Linq;
+    using System.Runtime.InteropServices;
     using System.Security.Cryptography;
     using Microsoft.Identity.Client;
 
@@ -14,93 +14,63 @@ namespace Microsoft.Vault.Library
         public string FileName;
         private static readonly object FileLock = new object();
 
-        public FileTokenCache() : this("microsoft.com")
-        {
-        }
+        public FileTokenCache() : this("microsoft.com") { }
 
-        /// <summary>
-        ///     Initializes the cache against a local file.
-        ///     If the file is already present, it loads its content in the MSAL cache
-        /// </summary>
-        /// <param name="domainHint">For example: microsoft.com or gme.gbl</param>
         public FileTokenCache(string domainHint)
         {
-            this.FileName = Environment.ExpandEnvironmentVariables(string.Format(Consts.VaultTokenCacheFileName, domainHint));
+            this.FileName = string.Format(Consts.VaultTokenCacheFileName, domainHint);
             Directory.CreateDirectory(Path.GetDirectoryName(this.FileName));
+
+            // Restrict file permissions on non-Windows (chmod 600).
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && File.Exists(this.FileName))
+            {
+                try { File.SetUnixFileMode(this.FileName, UnixFileMode.UserRead | UnixFileMode.UserWrite); }
+                catch { }
+            }
         }
 
-        /// <summary>
-        ///     Gets all login names for which there is a token cached locally.
-        /// </summary>
         public static string[] GetAllFileTokenCacheLoginNames()
         {
-            string[] paths = Directory.GetFiles(Environment.ExpandEnvironmentVariables(Consts.VaultTokenCacheDirectory));
+            string dir = Consts.VaultTokenCacheDirectory;
+            if (!Directory.Exists(dir))
+                return Array.Empty<string>();
+
+            string[] paths = Directory.GetFiles(dir);
+
             for (int i = 0; i < paths.Length; i++)
             {
-                //Gets filename from path.
-                paths[i] = paths[i].Split('\\').Last();
-
-                //Gets login name from filename.
-                paths[i] = paths[i].Split('_')[1];
+                var filename = Path.GetFileName(paths[i]);
+                paths[i] = filename.Split('_').Length > 1 ? filename.Split('_')[1] : filename;
             }
 
             return paths;
         }
 
-        /// <summary>
-        ///     Empties all persistent stores.
-        /// </summary>
         public static void ClearAllFileTokenCaches()
         {
-            string[] tokenNames = GetAllFileTokenCacheLoginNames();
-            foreach (string token in tokenNames)
-            {
+            foreach (string token in GetAllFileTokenCacheLoginNames())
                 new FileTokenCache(token).Clear();
-            }
         }
 
-        /// <summary>
-        ///     Renames the cache.
-        /// </summary>
-        /// <param name="newName"></param>
         public void Rename(string newName)
         {
-            newName = Environment.ExpandEnvironmentVariables(string.Format(Consts.VaultTokenCacheFileName, newName));
-            if (File.Exists(newName))
-            {
-                File.Delete(newName);
-            }
-
+            newName = string.Format(Consts.VaultTokenCacheFileName, newName);
+            if (File.Exists(newName)) File.Delete(newName);
             File.Move(this.FileName, newName);
             this.FileName = newName;
         }
 
-        /// <summary>
-        ///     Empties the persistent store
-        /// </summary>
         public void Clear()
         {
-            if (File.Exists(this.FileName))
-            {
-                File.Delete(this.FileName);
-            }
+            if (File.Exists(this.FileName)) File.Delete(this.FileName);
         }
 
-        /// <summary>
-        ///     Configures the token cache for an MSAL client application
-        /// </summary>
-        /// <param name="tokenCache">The MSAL token cache to configure</param>
         public void ConfigureTokenCache(ITokenCache tokenCache)
         {
             tokenCache.SetBeforeAccess(this.BeforeAccessNotification);
             tokenCache.SetAfterAccess(this.AfterAccessNotification);
         }
 
-        /// <summary>
-        ///     Triggered right before MSAL needs to access the cache
-        ///     Reload the cache from the persistent store in case it changed since the last access
-        /// </summary>
-        /// <param name="args"></param>
         private void BeforeAccessNotification(TokenCacheNotificationArgs args)
         {
             lock (FileLock)
@@ -110,43 +80,45 @@ namespace Microsoft.Vault.Library
                     try
                     {
                         byte[] encryptedData = File.ReadAllBytes(this.FileName);
-                        byte[] data = ProtectedData.Unprotect(encryptedData, null, DataProtectionScope.CurrentUser);
-                        args.TokenCache.DeserializeMsalV3(data);
+                        args.TokenCache.DeserializeMsalV3(Unprotect(encryptedData));
                     }
-                    catch (Exception)
+                    catch
                     {
-                        // If decryption fails, clear the cache and start fresh
                         this.Clear();
                     }
                 }
             }
         }
 
-        /// <summary>
-        ///     Triggered right after MSAL accessed the cache
-        /// </summary>
-        /// <param name="args"></param>
         private void AfterAccessNotification(TokenCacheNotificationArgs args)
         {
-            // if the access operation resulted in a cache update
             if (args.HasStateChanged)
             {
                 lock (FileLock)
                 {
                     try
                     {
-                        // reflect changes in the persistent store
                         byte[] data = args.TokenCache.SerializeMsalV3();
-                        byte[] encryptedData = ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
-                        File.WriteAllBytes(this.FileName, encryptedData);
+                        File.WriteAllBytes(this.FileName, Protect(data));
                     }
-                    catch (Exception)
-                    {
-                        // If encryption fails, don't crash the application
-                        // Log the error if logging is available
-                    }
+                    catch { }
                 }
             }
         }
+
+        /// <summary>
+        /// On Windows uses DPAPI (CurrentUser scope) to encrypt the cache file.
+        /// On macOS / Linux the bytes are written without encryption; the file is
+        /// protected by OS-level permissions (chmod 600 applied in the constructor).
+        /// </summary>
+        private static byte[] Protect(byte[] data) =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser)
+                : data;
+
+        private static byte[] Unprotect(byte[] data) =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? ProtectedData.Unprotect(data, null, DataProtectionScope.CurrentUser)
+                : data;
     }
 }

@@ -1,0 +1,340 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Microsoft.Vault.Explorer.ViewModels"
+        xmlns:pgc="using:Avalonia.PropertyGrid.Controls"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:materialIcons="clr-namespace:Material.Icons;assembly=Material.Icons"
+        x:Class="Microsoft.Vault.Explorer.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1200" Height="720"
+        MinWidth="900" MinHeight="520"
+        WindowStartupLocation="CenterScreen">
+  <Window.Icon>
+    <WindowIcon>avares://VaultExplorer/VaultExplorer.png</WindowIcon>
+  </Window.Icon>
+
+  <DockPanel>
+
+    <!-- ── Menu bar ────────────────────────────────────────────────────── -->
+    <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Header="_Refresh" Command="{Binding RefreshCommand}" InputGesture="F5"/>
+        <Separator/>
+        <MenuItem Header="Export to _TSV..." Command="{Binding ExportTsvCommand}"/>
+        <Separator/>
+        <MenuItem Header="E_xit" Command="{Binding ExitCommand}"/>
+      </MenuItem>
+      <MenuItem Header="_Edit">
+        <MenuItem Header="Add _Secret" Command="{Binding AddSecretCommand}"/>
+        <MenuItem Header="Add _Certificate from File..." Command="{Binding AddCertFromFileCommand}"/>
+        <Separator/>
+        <MenuItem Header="_Edit..." Command="{Binding EditCommand}" InputGesture="Enter"/>
+        <MenuItem Header="_Toggle Enable/Disable" Command="{Binding ToggleCommand}"/>
+        <MenuItem Header="_Delete..." Command="{Binding DeleteCommand}" InputGesture="Delete"/>
+        <Separator/>
+        <MenuItem Header="Copy _Value" Command="{Binding CopyValueCommand}"/>
+        <MenuItem Header="Copy _Link" Command="{Binding CopyLinkCommand}"/>
+        <MenuItem Header="_Save to File..." Command="{Binding SaveToFileCommand}"/>
+        <Separator/>
+        <MenuItem Header="Copy as _Environment Variable" Command="{Binding CopyAsEnvVarCommand}"/>
+        <MenuItem Header="Copy as _Docker --env" Command="{Binding CopyAsDockerEnvCommand}"/>
+        <MenuItem Header="Copy as _Kubernetes YAML" Command="{Binding CopyAsK8sYamlCommand}"/>
+        <MenuItem Header="Copy _Name" Command="{Binding CopyNameCommand}"/>
+        <Separator/>
+        <MenuItem Header="_Favorite" Command="{Binding ToggleFavoriteCommand}"/>
+      </MenuItem>
+      <MenuItem Header="_Settings" Command="{Binding SettingsCommand}"/>
+      <MenuItem Header="_Help" Command="{Binding HelpCommand}"/>
+    </Menu>
+
+    <!-- ── Vault selector + toolbar ────────────────────────────────────── -->
+    <DockPanel DockPanel.Dock="Top" Margin="4,3,4,3" LastChildFill="True">
+      <TextBlock Text="Vault:" VerticalAlignment="Center" Margin="0,0,6,0"
+                 FontSize="12" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+      <ComboBox ItemsSource="{Binding VaultAliases}"
+                SelectedItem="{Binding SelectedVaultAlias}"
+                Width="220"
+                DockPanel.Dock="Left"
+                Margin="0,0,8,0"
+                ToolTip.Tip="Select a vault to explore. Choose 'Pick vault from subscription...' to browse your Azure subscriptions."/>
+
+      <Border Width="1" Height="18" Background="#55888888"
+              Margin="0,0,8,0" VerticalAlignment="Center" DockPanel.Dock="Left"/>
+
+      <!-- Scrollable toolbar -->
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+
+          <!-- Refresh -->
+          <Button Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh vault (F5)" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="Refresh" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Refresh" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
+
+          <!-- Add Secret -->
+          <Button Command="{Binding AddSecretCommand}" ToolTip.Tip="Add new secret" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="LockPlus" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="+ Secret" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Add Certificate -->
+          <Button Command="{Binding AddCertFromFileCommand}" ToolTip.Tip="Add certificate from file" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="Certificate" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="+ Cert" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
+
+          <!-- Edit -->
+          <Button Command="{Binding EditCommand}" ToolTip.Tip="Edit selected item (Enter)" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="PencilOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Edit" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Enable / Disable -->
+          <Button Command="{Binding ToggleCommand}" ToolTip.Tip="Enable or disable the selected item" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="LockOpenOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding ToggleText}" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Delete -->
+          <Button Command="{Binding DeleteCommand}" ToolTip.Tip="Delete selected item(s) (Del)" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Delete" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
+
+          <!-- Copy Value -->
+          <Button Command="{Binding CopyValueCommand}" ToolTip.Tip="Copy value to clipboard" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="ContentCopy" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Copy" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Copy Link -->
+          <Button Command="{Binding CopyLinkCommand}" ToolTip.Tip="Copy vault:// deep link" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="LinkVariant" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Link" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Save to File -->
+          <Button Command="{Binding SaveToFileCommand}" ToolTip.Tip="Save secret/certificate to encrypted file" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="ContentSave" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Save" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
+
+          <!-- Copy as ENV var -->
+          <Button Command="{Binding CopyAsEnvVarCommand}" ToolTip.Tip="Copy as environment variable  →  NAME=value" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="Console" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Copy as ENV" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Copy as Docker -->
+          <Button Command="{Binding CopyAsDockerEnvCommand}" ToolTip.Tip="Copy as Docker flag  →  --env NAME=value" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="Docker" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Copy as Docker" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Copy as K8s YAML -->
+          <Button Command="{Binding CopyAsK8sYamlCommand}" ToolTip.Tip="Copy as Kubernetes secret YAML block" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="Kubernetes" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Copy as K8s" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Copy Name -->
+          <Button Command="{Binding CopyNameCommand}" ToolTip.Tip="Copy item name to clipboard" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="KeyVariant" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Copy Name" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
+
+          <!-- Favorite -->
+          <ToggleButton Command="{Binding ToggleFavoriteCommand}"
+                        IsChecked="{Binding IsFavorite, Mode=OneWay}"
+                        ToolTip.Tip="Mark or unmark as favorite" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="StarOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Favorite" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </ToggleButton>
+
+          <Border Width="1" Height="18" Background="#33888888" Margin="2,0" VerticalAlignment="Center"/>
+
+          <!-- Settings -->
+          <Button Command="{Binding SettingsCommand}" ToolTip.Tip="Open settings" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="CogOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Settings" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+          <!-- Help -->
+          <Button Command="{Binding HelpCommand}" ToolTip.Tip="Show keyboard shortcuts and help" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <mi:MaterialIcon Kind="HelpCircleOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+              <TextBlock Text="Help" VerticalAlignment="Center" FontSize="12"/>
+            </StackPanel>
+          </Button>
+
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+
+    <!-- ── Search row ───────────────────────────────────────────────────── -->
+    <DockPanel DockPanel.Dock="Top" Margin="4,2,4,4">
+      <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,6,0"
+                 FontSize="12" FontWeight="SemiBold"/>
+      <TextBox Name="SearchBox"
+               Text="{Binding VaultListViewModel.SearchText}"
+               Watermark="Filter items by name (supports regex)..."
+               MinWidth="260"/>
+    </DockPanel>
+
+    <!-- ── Status bar ───────────────────────────────────────────────────── -->
+    <Grid DockPanel.Dock="Bottom"
+          ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+          Margin="6,2" Height="24">
+      <TextBlock Grid.Column="0" Text="{Binding StatusText}"
+                 VerticalAlignment="Center" FontSize="11" Opacity="0.7"/>
+      <TextBlock Grid.Column="1" Text="{Binding ItemCountText}"
+                 VerticalAlignment="Center" Margin="12,0" FontSize="11"/>
+      <TextBlock Grid.Column="2" Text="{Binding SelectedCountText}"
+                 VerticalAlignment="Center" Margin="8,0" FontSize="11" Opacity="0.8"/>
+      <ProgressBar Grid.Column="3"
+                   IsIndeterminate="True"
+                   IsVisible="{Binding IsBusy}"
+                   Width="100" Height="10"
+                   Margin="4,0"/>
+      <Button Grid.Column="4"
+              Content="Cancel"
+              Command="{Binding CancelCommand}"
+              IsVisible="{Binding IsBusy}"
+              Padding="6,0" FontSize="11"/>
+    </Grid>
+
+    <!-- ── Vault tabs ────────────────────────────────────────────────────── -->
+    <Panel>
+      <!-- Empty state: no tabs open -->
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12"
+                  IsVisible="{Binding !HasTabs}">
+        <mi:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Lock}" Width="64" Height="64" Opacity="0.15"
+                         HorizontalAlignment="Center"/>
+        <TextBlock Text="Select a vault from the dropdown above to get started"
+                   FontSize="14" Opacity="0.4" HorizontalAlignment="Center"/>
+      </StackPanel>
+
+      <!-- Tab control (shown when ≥1 vault is open) -->
+      <TabControl ItemsSource="{Binding Tabs}"
+                  SelectedItem="{Binding SelectedTab}"
+                  IsVisible="{Binding HasTabs}">
+
+        <TabControl.ItemTemplate>
+          <DataTemplate DataType="vm:VaultTabViewModel">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <mi:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Lock}" Width="13" Height="13" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding Header}" VerticalAlignment="Center" FontSize="12"/>
+              <Button Content="✕"
+                      Command="{Binding CloseCommand}"
+                      Padding="3,0"
+                      FontSize="10"
+                      VerticalAlignment="Center"
+                      ToolTip.Tip="Close vault tab"
+                      Background="Transparent"/>
+            </StackPanel>
+          </DataTemplate>
+        </TabControl.ItemTemplate>
+
+        <TabControl.ContentTemplate>
+          <DataTemplate DataType="vm:VaultTabViewModel">
+            <!-- Main split: item list (left) | property panel (right) -->
+            <Grid ColumnDefinitions="*,4,300">
+
+              <!-- Item DataGrid -->
+              <DataGrid Grid.Column="0"
+                        ItemsSource="{Binding VaultList.Items}"
+                        SelectedItem="{Binding SelectedItem}"
+                        IsReadOnly="True"
+                        SelectionMode="Extended"
+                        CanUserResizeColumns="True"
+                        CanUserSortColumns="True"
+                        GridLinesVisibility="Horizontal"
+                        SelectionChanged="OnDataGridSelectionChanged"
+                        Loaded="OnDataGridLoaded"
+                        Unloaded="OnDataGridUnloaded">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Name"
+                                      Binding="{Binding Name}"
+                                      Width="*"
+                                      MinWidth="160"/>
+                  <DataGridTextColumn Header="Status"
+                                      Binding="{Binding Status}"
+                                      Width="110"/>
+                  <DataGridTextColumn Header="Updated"
+                                      Binding="{Binding Updated, StringFormat='{}{0:g}'}"
+                                      Width="130"/>
+                  <DataGridTextColumn Header="Expires"
+                                      Binding="{Binding ExpiresDisplay}"
+                                      Width="90"/>
+                  <DataGridTextColumn Header="Changed By"
+                                      Binding="{Binding ChangedBy}"
+                                      Width="120"/>
+                </DataGrid.Columns>
+              </DataGrid>
+
+              <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Transparent"/>
+
+              <!-- Property panel -->
+              <Panel Grid.Column="2">
+                <TextBlock Text="Select an item to view its properties"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           Opacity="0.4"
+                           FontStyle="Italic"
+                           IsVisible="{Binding SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"/>
+                <pgc:PropertyGrid DataContext="{Binding SelectedItem}"
+                                  ShowTitle="False"
+                                  AllowFilter="False"
+                                  IsVisible="{Binding SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+              </Panel>
+            </Grid>
+          </DataTemplate>
+        </TabControl.ContentTemplate>
+
+      </TabControl>
+    </Panel>
+
+  </DockPanel>
+</Window>

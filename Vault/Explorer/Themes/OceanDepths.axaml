@@ -1,0 +1,20 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Sentinel key so App.axaml.cs can identify and swap this dictionary -->
+  <x:Boolean x:Key="__VaultTheme__">True</x:Boolean>
+
+  <!-- Ocean Depths — professional maritime dark theme
+       Base: Deep Navy #1a2332  |  Accent: Teal #2d8b8b  |  Highlight: Seafoam #a8dadc  |  Text: Cream #f1faee -->
+  <Color x:Key="SystemAccentColor">#2d8b8b</Color>
+  <Color x:Key="SystemAccentColorLight1">#3da9a9</Color>
+  <Color x:Key="SystemAccentColorLight2">#52c5c5</Color>
+  <Color x:Key="SystemAccentColorLight3">#70d8d8</Color>
+  <Color x:Key="SystemAccentColorDark1">#1f6565</Color>
+  <Color x:Key="SystemAccentColorDark2">#134040</Color>
+  <Color x:Key="SystemAccentColorDark3">#082020</Color>
+
+  <!-- Vault item status colors -->
+  <SolidColorBrush x:Key="VaultExpiredBrush"     Color="#e05555"/>
+  <SolidColorBrush x:Key="VaultExpiringSoonBrush" Color="#e8a000"/>
+  <SolidColorBrush x:Key="VaultDisabledBrush"     Color="#666e78"/>
+</ResourceDictionary>

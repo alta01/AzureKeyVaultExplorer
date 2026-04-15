@@ -132,8 +132,8 @@ namespace Microsoft.Vault.Explorer.Config
         /// </summary>
         private static string GetVaultsFilePath()
         {
-            string rootPath = Environment.ExpandEnvironmentVariables(Settings.Default.JsonConfigurationFilesRoot);
-            return Path.Combine(rootPath, Settings.Default.VaultsJsonFileLocation);
+            string rootPath = Environment.ExpandEnvironmentVariables(AppSettings.Default.JsonConfigurationFilesRoot);
+            return Path.Combine(rootPath, AppSettings.Default.VaultsJsonFileLocation);
         }
 
         /// <summary>
@@ -235,8 +235,8 @@ namespace Microsoft.Vault.Explorer.Config
         /// </summary>
         private static string GetVaultAliasesFilePath()
         {
-            string rootPath = Environment.ExpandEnvironmentVariables(Settings.Default.JsonConfigurationFilesRoot);
-            return Path.Combine(rootPath, Settings.Default.VaultAliasesJsonFileLocation);
+            string rootPath = Environment.ExpandEnvironmentVariables(AppSettings.Default.JsonConfigurationFilesRoot);
+            return Path.Combine(rootPath, AppSettings.Default.VaultAliasesJsonFileLocation);
         }
 
         /// <summary>

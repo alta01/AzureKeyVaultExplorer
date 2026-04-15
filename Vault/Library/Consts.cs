@@ -3,6 +3,8 @@
 
 namespace Microsoft.Vault.Library
 {
+    using System;
+    using System.IO;
     using System.Text.RegularExpressions;
 
     public static class Consts
@@ -67,8 +69,13 @@ namespace Microsoft.Vault.Library
 
         internal const int GetCertificateVersionsMaxResults = 25;
 
-        internal const string VaultTokenCacheDirectory = @"%AppData%\Microsoft\Vault";
+        internal static readonly string VaultTokenCacheDirectory =
+            System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Microsoft", "Vault");
 
-        internal const string VaultTokenCacheFileName = VaultTokenCacheDirectory + @"\TokenCache_{0}_cc73e24a-63f3-4d9f-878c-53b85fecd872.dat"; // {0} - DomainHint
+        internal static readonly string VaultTokenCacheFileName =
+            System.IO.Path.Combine(VaultTokenCacheDirectory,
+                "TokenCache_{0}_cc73e24a-63f3-4d9f-878c-53b85fecd872.dat"); // {0} - DomainHint
     }
 }

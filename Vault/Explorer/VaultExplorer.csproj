@@ -1,48 +1,95 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Build\AutoVersioning.props" />
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <OutputType>WinExe</OutputType>
+    <!-- Phase 5: cross-platform net10.0; build per-platform with -r win-x64 / osx-arm64 / linux-x64 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Microsoft.Vault.Explorer</RootNamespace>
     <AssemblyDescription>Azure Key Vault Explorer</AssemblyDescription>
-    <ApplicationIcon>$(AssemblyName).ico</ApplicationIcon>
-    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch Condition="'$(BuildingInsideVisualStudio)' != ''">None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
     <AutoVersioning>true</AutoVersioning>
     <ProductName>VaultExplorer</ProductName>
     <AssemblyCompany>VaultExplorer</AssemblyCompany>
     <ApplicationRevision>1</ApplicationRevision>
     <ApplicationVersion>2024.1219.1449.37</ApplicationVersion>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
-    <NoWarn>;NU1507</NoWarn>
+    <NoWarn>$(NoWarn);NU1507</NoWarn>
     <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
-    <GenerateManifests>false</GenerateManifests>
-    <TargetZone>LocalIntranet</TargetZone>
-    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
-    <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
     <GenerateResourceWarnOnBinaryFormatterUse>false</GenerateResourceWarnOnBinaryFormatterUse>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-	<SelfContained>True</SelfContained>
+    <SelfContained>True</SelfContained>
+    <!-- Avalonia apps need this to locate the app entry point -->
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
+
+  <!-- ── Packages ─────────────────────────────────────────────────────────── -->
   <ItemGroup>
-    <PackageReference Include="fernandreu.ScintillaNET" Version="4.2.0" />
-    <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.2.0" />
-    <PackageReference Include="Azure.Identity" Version="1.13.0" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.77.1" />
-    <PackageReference Include="Microsoft.Identity.Client.Desktop" Version="4.77.1" />
+    <!-- Azure SDK -->
+    <PackageReference Include="Azure.ResourceManager" Version="1.14.0" />
+    <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.3.3" />
+    <PackageReference Include="Azure.Identity" Version="1.13.1" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.83.3" />
+    <!-- Avalonia UI stack -->
+    <PackageReference Include="Avalonia" Version="11.3.8" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.8" />
+    <!-- AvaloniaEdit replaces ScintillaNET -->
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
+    <!-- bodong.Avalonia.PropertyGrid replaces WinForms PropertyGrid -->
+    <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.3.0.12" />
+    <!-- DynamicData for reactive list filtering -->
+    <PackageReference Include="DynamicData" Version="9.4.1" />
+    <!-- DI container -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <!-- Cross-platform secret file encryption (replaces Windows-only DPAPI) -->
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.0" />
+    <!-- Material Design vector icons — crisp at all DPIs -->
+    <PackageReference Include="Material.Icons.Avalonia" Version="2.1.0" />
   </ItemGroup>
+
+  <!-- ── AXAML compilation ─────────────────────────────────────────────────── -->
   <ItemGroup>
-    <Compile Update="Controls\Lists\ListViewSecrets.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Update="Properties\Settings.Designer.cs">
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
+    <AvaloniaXaml Update="App.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\MainWindow.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\MessageDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\ExceptionDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\PasswordDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\SettingsView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\SecretDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\CertificateDialogView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+    <AvaloniaXaml Update="Views\Dialogs\SubscriptionsManagerView.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaXaml>
+  </ItemGroup>
+
+  <!-- ── Icon assets ─────────────────────────────────────────────────────── -->
+  <ItemGroup>
+    <AvaloniaResource Include="Resources\**" />
+    <AvaloniaResource Include="Themes\**" />
+    <!-- App icon embedded for avares:// URI (taskbar icon on Linux) -->
+    <AvaloniaResource Include="VaultExplorer.png" />
+  </ItemGroup>
+
+  <!-- ── Static content ───────────────────────────────────────────────────── -->
+  <ItemGroup>
     <Compile Update="Controls\MenuItems\CustomVersion.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -71,16 +118,13 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <!-- ── Project references ───────────────────────────────────────────────── -->
   <ItemGroup>
     <ProjectReference Include="..\Library\VaultLibrary.csproj" />
-    <ProjectReference Include="..\ClearClipboard\ClearClipboard.csproj" />
+    <ProjectReference Include="..\ClearClipboard\ClearClipboard.csproj" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
+
   <Target Name="AfterCompile">
     <GetAssemblyIdentity AssemblyFiles="$(IntermediateOutputPath)$(TargetFileName)">
       <Output TaskParameter="Assemblies" ItemName="TargetAssemblyIdentity" />

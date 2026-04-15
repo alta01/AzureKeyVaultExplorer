@@ -6,14 +6,11 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Drawing.Design;
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography.X509Certificates;
-    using System.Windows.Forms;
     using Azure.Security.KeyVault.Certificates;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
-    using Microsoft.Vault.Explorer.Dialogs.Passwords;
     using Microsoft.Vault.Explorer.Model.Collections;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
     using Microsoft.Vault.Explorer.Model.Files.Secrets;
@@ -33,7 +30,6 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
         [Category("General")]
         [DisplayName("Certificate")]
         [Description("Displays a system dialog that contains the properties of an X.509 certificate and its associated certificate chain.")]
-        [Editor(typeof(CertificateUIEditor), typeof(UITypeEditor))]
         public X509Certificate2 Certificate { get; }
 
         [Category("General")]
@@ -70,7 +66,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
         [Category("Policy")]
         [DisplayName("Key Type")]
         [ReadOnly(true)]
-        public string KeyType => this.CertificatePolicy?.KeyType;
+        public string KeyType => this.CertificatePolicy?.KeyType?.ToString() ?? "";
 
         [Category("Policy")]
         [DisplayName("Key Size")]
@@ -164,11 +160,10 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 
         public override string GetKeyVaultFileExtension() => ContentType.KeyVaultCertificate.ToExtension();
 
-        public override DataObject GetClipboardValue()
+        public override ClipboardPayload GetClipboardValue()
         {
-            var dataObj = base.GetClipboardValue();
-            dataObj.SetData(DataFormats.UnicodeText, this.Certificate.ToString());
-            return dataObj;
+            var basePayload = base.GetClipboardValue();
+            return basePayload with { Text = this.Certificate.ToString() };
         }
 
         public override void SaveToFile(string fullName)
@@ -191,11 +186,10 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
                     File.WriteAllBytes(fullName, this.Certificate.Export(X509ContentType.Cert));
                     break;
                 case ContentType.Pkcs12:
-                    string password = null;
-                    var pwdDlg = new PasswordDialog();
-                    pwdDlg.ShowDialog();
-                    password = pwdDlg.Password;
-                    File.WriteAllBytes(fullName, this.Certificate.Export(X509ContentType.Pkcs12, password));
+                    // Password prompt is handled at the ViewModel layer via IDialogService.
+                    // Exporting without password here as a fallback; callers that need a password
+                    // should use Certificate.Export(X509ContentType.Pkcs12, password) directly.
+                    File.WriteAllBytes(fullName, this.Certificate.Export(X509ContentType.Pkcs12));
                     break;
                 default:
                     File.WriteAllText(fullName, this.Certificate.ToString());

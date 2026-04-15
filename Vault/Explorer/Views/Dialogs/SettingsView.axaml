@@ -1,0 +1,307 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Microsoft.Vault.Explorer.ViewModels"
+        x:Class="Microsoft.Vault.Explorer.Views.Dialogs.SettingsView"
+        x:DataType="vm:SettingsViewModel"
+        Title="Settings"
+        Width="680" Height="720"
+        MinWidth="560" MinHeight="560"
+        WindowStartupLocation="CenterOwner">
+
+  <DockPanel Margin="12">
+
+    <!-- Bottom buttons -->
+    <StackPanel DockPanel.Dock="Bottom"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="8"
+                Margin="0,8,0,0">
+      <Button Content="Save"
+              IsDefault="True"
+              Width="90"
+              Command="{Binding SaveCommand}"
+              Click="OkButton_Click"/>
+      <Button Content="Close"
+              Width="90"
+              IsCancel="True"
+              Click="CancelButton_Click"/>
+    </StackPanel>
+
+    <!-- Tab control -->
+    <TabControl>
+
+      <!-- ══ Settings tab ══════════════════════════════════════════════════ -->
+      <TabItem Header="Settings">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="0,4,12,0">
+          <StackPanel Spacing="0">
+
+            <!-- Settings file path hint -->
+            <Border Background="#1A0078D4"
+                    BorderBrush="#330078D4"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,6"
+                    Margin="0,0,0,16">
+              <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.85">
+                <Run FontWeight="SemiBold">settings.json</Run>
+                <Run> stored at </Run>
+                <Run FontStyle="Italic" FontFamily="Cascadia Mono,Consolas,monospace" FontSize="10"
+                     Text="{x:Static vm:SettingsViewModel.SettingsFilePathDisplay}"/>
+                <Run>  ·  Use </Run>
+                <Run FontWeight="SemiBold">About → Settings Folder</Run>
+                <Run> to open it in your file manager.</Run>
+              </TextBlock>
+            </Border>
+
+            <!-- ── Appearance ─────────────────────────────────────────── -->
+            <TextBlock Text="Appearance" FontSize="13" FontWeight="SemiBold"
+                       Margin="0,0,0,8" Opacity="0.7"/>
+
+            <Grid ColumnDefinitions="200,*" RowDefinitions="Auto" Margin="0,0,0,16">
+              <TextBlock Grid.Column="0" Text="Theme" VerticalAlignment="Center"
+                         ToolTip.Tip="Color theme and accent palette. Changes apply immediately."/>
+              <ComboBox Grid.Column="1"
+                        ItemsSource="{x:Static vm:SettingsViewModel.ThemeOptions}"
+                        SelectedItem="{Binding SelectedTheme}"
+                        HorizontalAlignment="Stretch"
+                        MaxDropDownHeight="240">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ThemeOption">
+                    <StackPanel>
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.65"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+
+            <!-- ── General ────────────────────────────────────────────── -->
+            <TextBlock Text="General" FontSize="13" FontWeight="SemiBold"
+                       Margin="0,0,0,8" Opacity="0.7"/>
+
+            <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto"
+                  Margin="0,0,0,16">
+
+              <!-- Clipboard clear delay -->
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Clipboard clear delay"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="How long a copied secret stays in your clipboard before being automatically cleared. 'Never' disables auto-clear."/>
+              <ComboBox Grid.Row="0" Grid.Column="1"
+                        ItemsSource="{x:Static vm:SettingsViewModel.ClipboardDelayOptions}"
+                        SelectedItem="{Binding SelectedClipboardDelay}"
+                        HorizontalAlignment="Stretch"/>
+
+              <!-- Expiry warning period -->
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Expiry warning period"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="How far in advance a secret or certificate is highlighted as 'about to expire'. Use Custom to enter an exact number of days (max 90)."/>
+              <ComboBox Grid.Row="2" Grid.Column="1"
+                        ItemsSource="{x:Static vm:SettingsViewModel.ExpiryWarningOptions}"
+                        SelectedItem="{Binding SelectedExpiryWarning}"
+                        HorizontalAlignment="Stretch"/>
+
+              <!-- Custom expiry days — shown only when Custom is selected -->
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Custom expiry (days)"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding IsCustomExpiry}"
+                         ToolTip.Tip="Number of days before expiry to highlight the item. Maximum 90 days."/>
+              <NumericUpDown Grid.Row="4" Grid.Column="1"
+                             IsVisible="{Binding IsCustomExpiry}"
+                             Value="{Binding CustomExpiryDays}"
+                             Minimum="1" Maximum="90"
+                             FormatString="0"
+                             HorizontalAlignment="Left" Width="120"/>
+
+              <!-- Expiring color -->
+              <TextBlock Grid.Row="6" Grid.Column="0" Text="Expiring item color"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="Row highlight color for items that will expire within the warning period."/>
+              <ComboBox Grid.Row="6" Grid.Column="1"
+                        ItemsSource="{x:Static vm:SettingsViewModel.StatusColorOptions}"
+                        SelectedItem="{Binding SelectedExpiringColor}"
+                        HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ColorOption">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Width="16" Height="16" CornerRadius="2"
+                              Background="{Binding HexColor}"/>
+                      <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+
+              <!-- Expired color -->
+              <TextBlock Grid.Row="8" Grid.Column="0" Text="Expired item color"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="Row highlight color for items that have already expired or are not yet active."/>
+              <ComboBox Grid.Row="8" Grid.Column="1"
+                        ItemsSource="{x:Static vm:SettingsViewModel.StatusColorOptions}"
+                        SelectedItem="{Binding SelectedExpiredColor}"
+                        HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ColorOption">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Border Width="16" Height="16" CornerRadius="2"
+                              Background="{Binding HexColor}"/>
+                      <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </Grid>
+
+            <!-- ── Azure Accounts ──────────────────────────────────────── -->
+            <TextBlock Text="Azure Accounts" FontSize="13" FontWeight="SemiBold"
+                       Margin="0,0,0,4" Opacity="0.7"/>
+            <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.65" Margin="0,0,0,8">
+              Add your Azure account email(s) here. They appear in the Subscriptions Manager
+              when browsing vaults from a subscription.
+            </TextBlock>
+
+            <!-- Add account row -->
+            <Grid ColumnDefinitions="*,8,Auto" Margin="0,0,0,6">
+              <TextBox Grid.Column="0"
+                       Text="{Binding NewAccountName}"
+                       Watermark="user@contoso.com"
+                       VerticalContentAlignment="Center"/>
+              <Button Grid.Column="2"
+                      Content="Add"
+                      Command="{Binding AddAccountCommand}"
+                      Width="64"/>
+            </Grid>
+
+            <!-- Account list -->
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    MinHeight="80"
+                    MaxHeight="140"
+                    Margin="0,0,0,16">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding AccountNames}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <Grid ColumnDefinitions="*,Auto" Margin="6,2">
+                        <TextBlock Grid.Column="0" Text="{Binding}"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1"
+                                Content="✕"
+                                FontSize="10"
+                                Padding="4,2"
+                                Command="{Binding $parent[Window].DataContext.RemoveAccountCommand}"
+                                CommandParameter="{Binding}"
+                                ToolTip.Tip="Remove this account"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Border>
+
+            <!-- ── Vault Configuration Files ───────────────────────────── -->
+            <TextBlock Text="Vault Configuration Files" FontSize="13" FontWeight="SemiBold"
+                       Margin="0,0,0,4" Opacity="0.7"/>
+            <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.65" Margin="0,0,0,8">
+              File names are relative to the Config Root folder. Leave Config Root empty to use
+              the default settings folder shown in the banner above. Hover each label for details.
+            </TextBlock>
+
+            <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto"
+                  Margin="0,0,0,8">
+
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Config root folder"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="Absolute path to the folder containing all vault JSON config files. Leave empty to use the default app data folder (shown in the blue banner above). Useful when you keep config in a shared network drive or git repo."/>
+              <TextBox Grid.Row="0" Grid.Column="1"
+                       Text="{Binding EditCopy.JsonConfigurationFilesRoot}"
+                       Watermark="(default app data folder)"
+                       VerticalContentAlignment="Center"/>
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Vaults file"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="Vaults.json — defines the Azure Key Vault connections: vault name, subscription ID, resource group, and tenant. Each entry appears as an option in the vault dropdown. Edit this file to add or configure vault connections directly."/>
+              <TextBox Grid.Row="2" Grid.Column="1"
+                       Text="{Binding EditCopy.VaultsJsonFileLocation}"
+                       VerticalContentAlignment="Center"/>
+
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Vault aliases file"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="VaultAliases.json — maps short friendly names to vault URLs. Each alias creates a named shortcut in the vault dropdown. Add an entry here to quickly access a vault without typing its full URL. Format: { 'MyAlias': 'https://myvault.vault.azure.net/' }"/>
+              <TextBox Grid.Row="4" Grid.Column="1"
+                       Text="{Binding EditCopy.VaultAliasesJsonFileLocation}"
+                       VerticalContentAlignment="Center"/>
+
+              <TextBlock Grid.Row="6" Grid.Column="0" Text="Secret kinds file"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="SecretKinds.json — defines custom secret type templates that appear in the secret editor type dropdown. Each kind can specify a display name, icon, regex validation pattern, and default tags. Use this to standardize secret formats across your team."/>
+              <TextBox Grid.Row="6" Grid.Column="1"
+                       Text="{Binding EditCopy.SecretKindsJsonFileLocation}"
+                       VerticalContentAlignment="Center"/>
+
+              <TextBlock Grid.Row="8" Grid.Column="0" Text="Custom tags file"
+                         VerticalAlignment="Center"
+                         ToolTip.Tip="CustomTags.json — defines suggested tag key/value pairs shown as autocomplete options in the tag editor. Use this to enforce consistent tagging conventions (e.g. 'Environment': ['dev','staging','prod'], 'Owner': [...])."/>
+              <TextBox Grid.Row="8" Grid.Column="1"
+                       Text="{Binding EditCopy.CustomTagsJsonFileLocation}"
+                       VerticalContentAlignment="Center"/>
+            </Grid>
+
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ══ About tab ═════════════════════════════════════════════════════ -->
+      <TabItem Header="About">
+        <DockPanel Margin="8">
+
+          <!-- Links row -->
+          <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Button Content="GitHub" Command="{Binding OpenGitHubCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Open the project on GitHub (alta01/AzureKeyVaultExplorer)"/>
+            <Button Content="Send Feedback" Command="{Binding OpenFeedbackCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Report a bug or suggest a feature on GitHub Issues"/>
+            <Button Content="Install Folder" Command="{Binding OpenInstallFolderCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Open the folder where the application binaries are installed"/>
+            <Button Content="Settings Folder" Command="{Binding OpenSettingsFolderCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Open the folder containing settings.json and vault configuration files"/>
+            <Button Content="Clear Token Cache" Command="{Binding ClearTokenCacheCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Delete all cached Azure authentication tokens. You will be prompted to sign in again."/>
+          </WrapPanel>
+
+          <!-- Versions -->
+          <TextBlock DockPanel.Dock="Top"
+                     Text="Version Information:"
+                     FontWeight="SemiBold"
+                     Margin="0,0,0,4"/>
+          <TextBox DockPanel.Dock="Top"
+                   Text="{Binding VersionsInfo}"
+                   IsReadOnly="True"
+                   FontFamily="Cascadia Mono,Consolas,monospace"
+                   FontSize="11"
+                   Height="90"
+                   AcceptsReturn="True"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   Margin="0,0,0,12"/>
+
+          <!-- License -->
+          <TextBlock DockPanel.Dock="Top"
+                     Text="License:"
+                     FontWeight="SemiBold"
+                     Margin="0,0,0,4"/>
+          <TextBox Text="{Binding LicenseText}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   FontSize="11"/>
+
+        </DockPanel>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</Window>

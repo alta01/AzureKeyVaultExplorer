@@ -3,8 +3,8 @@
 
 namespace Microsoft.Vault.Explorer.Model
 {
-    using Microsoft.Vault.Explorer.Controls.Lists;
     using Microsoft.Vault.Explorer.Model.Files.Aliases;
+    using Microsoft.Vault.Explorer.ViewModels;
 
     public interface ISession
     {
@@ -12,6 +12,6 @@ namespace Microsoft.Vault.Explorer.Model
 
         Library.Vault CurrentVault { get; }
 
-        ListViewSecrets ListViewSecrets { get; }
+        VaultListViewModel VaultListViewModel { get; }
     }
 }

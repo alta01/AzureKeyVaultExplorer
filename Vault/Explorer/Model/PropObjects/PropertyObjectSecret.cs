@@ -12,7 +12,6 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
     using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Text.RegularExpressions;
-    using System.Windows.Forms;
     using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
     using Microsoft.Vault.Explorer.Model.Collections;
@@ -73,7 +72,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this._version = secret.Properties.Version;
             this._contentType = ContentTypeEnumConverter.GetValue(secret.Properties.ContentType);
             this._value = this._contentType.FromRawValue(secret.Value);
-            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(AppSettings.Default.CustomTagsJsonFileLocation, isOptional: true);
         }
 
         /// <summary>Constructor for a secret loaded from a .kv-secret file.</summary>
@@ -90,7 +89,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this._version = fileData.ToObjectIdentifier().Version;
             this._contentType = ContentTypeEnumConverter.GetValue(fileData.ContentType);
             this._value = this._contentType.FromRawValue(fileData.Value);
-            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(AppSettings.Default.CustomTagsJsonFileLocation, isOptional: true);
         }
 
         /// <summary>Constructor for a brand-new secret (not yet in vault).</summary>
@@ -101,7 +100,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
             this._version = null;
             this._contentType = ContentTypeEnumConverter.GetValue(contentType);
             this._value = null;
-            this._customTags = Utils.LoadFromJsonFile<CustomTags>(Settings.Default.CustomTagsJsonFileLocation, isOptional: true);
+            this._customTags = Utils.LoadFromJsonFile<CustomTags>(AppSettings.Default.CustomTagsJsonFileLocation, isOptional: true);
         }
 
         protected override IEnumerable<TagItem> GetValueBasedCustomTags()
@@ -223,12 +222,13 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
 
         public override string GetKeyVaultFileExtension() => ContentType.KeyVaultSecret.ToExtension();
 
-        public override DataObject GetClipboardValue()
+        public override ClipboardPayload GetClipboardValue()
         {
-            var dataObj = base.GetClipboardValue();
-            // We use SetData() and not SetText() to support correctly empty string "" as a value
-            dataObj.SetData(DataFormats.UnicodeText, this.ContentType.IsCertificate() ? CertificateValueObject.FromValue(this.Value)?.Password : this.Value);
-            return dataObj;
+            var basePayload = base.GetClipboardValue();
+            var text = this.ContentType.IsCertificate()
+                ? CertificateValueObject.FromValue(this.Value)?.Password
+                : this.Value;
+            return basePayload with { Text = text };
         }
 
         public override void SaveToFile(string fullName)
