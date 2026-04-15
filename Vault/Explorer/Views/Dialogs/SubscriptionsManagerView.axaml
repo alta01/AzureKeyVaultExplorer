@@ -76,7 +76,7 @@
 
       <!-- Bottom: vault property grid -->
       <pgc:PropertyGrid Grid.Row="2"
-                        SelectedObject="{Binding VaultDetails}"
+                        DataContext="{Binding VaultDetails}"
                         ShowTitle="False"/>
 
     </Grid>

@@ -1,5 +1,4 @@
 using System.Reactive.Linq;
-using Avalonia.Input;
 
 namespace Microsoft.Vault.Explorer.Services;
 
@@ -21,12 +20,9 @@ public sealed class AvaloniaIdleDetectionService : IIdleDetectionService
         _idleTimer.Elapsed += (_, _) => IdleDetected?.Invoke(this, EventArgs.Empty);
         _idleTimer.Start();
 
-        // Subscribe to ALL input events and reset the idle timer on each one.
-        _inputSubscription = Observable
-            .FromEventPattern<RawInputEventArgs>(
-                h => InputManager.Current.Process += h,
-                h => InputManager.Current.Process -= h)
-            .Subscribe(_ => ResetIdleTimer());
+        // InputManager is internal in Avalonia 11; idle detection is timer-only.
+        // Activity reset must be driven externally via ResetIdleTimer() from the view layer.
+        _inputSubscription = System.Reactive.Disposables.Disposable.Empty;
     }
 
     public void Stop()

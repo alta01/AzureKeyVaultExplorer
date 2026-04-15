@@ -173,7 +173,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         // ── Private helpers ────────────────────────────────────────────────────
 
-        private CertificatePolicy DefaultPolicy() => new("Self")
+        private CertificatePolicy DefaultPolicy() => new("Self", "CN=Self")
         {
             Exportable = true,
             KeySize = 2048,

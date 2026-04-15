@@ -5,6 +5,7 @@
     <!-- Phase 5: cross-platform net10.0; build per-platform with -r win-x64 / osx-arm64 / linux-x64 -->
     <TargetFramework>net10.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Microsoft.Vault.Explorer</RootNamespace>
     <AssemblyDescription>Azure Key Vault Explorer</AssemblyDescription>
     <AutoVersioning>true</AutoVersioning>
@@ -24,18 +25,20 @@
   <!-- ── Packages ─────────────────────────────────────────────────────────── -->
   <ItemGroup>
     <!-- Azure SDK -->
+    <PackageReference Include="Azure.ResourceManager" Version="1.9.0" />
     <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.2.0" />
     <PackageReference Include="Azure.Identity" Version="1.13.0" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.77.1" />
     <!-- Avalonia UI stack -->
-    <PackageReference Include="Avalonia" Version="11.2.0" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.2.0" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.0" />
-    <PackageReference Include="Avalonia.ReactiveUI" Version="11.2.0" />
+    <PackageReference Include="Avalonia" Version="11.3.8" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.8" />
     <!-- AvaloniaEdit replaces ScintillaNET -->
-    <PackageReference Include="AvaloniaEdit" Version="11.1.0" />
-    <!-- Avalonia.PropertyGrid replaces WinForms PropertyGrid -->
-    <PackageReference Include="Avalonia.PropertyGrid" Version="11.2.0" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
+    <!-- bodong.Avalonia.PropertyGrid replaces WinForms PropertyGrid -->
+    <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.3.0.12" />
     <!-- DynamicData for reactive list filtering -->
     <PackageReference Include="DynamicData" Version="9.0.4" />
     <!-- DI container -->
@@ -107,7 +110,7 @@
   <!-- ── Project references ───────────────────────────────────────────────── -->
   <ItemGroup>
     <ProjectReference Include="..\Library\VaultLibrary.csproj" />
-    <ProjectReference Include="..\ClearClipboard\ClearClipboard.csproj" />
+    <ProjectReference Include="..\ClearClipboard\ClearClipboard.csproj" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
 
   <Target Name="AfterCompile">

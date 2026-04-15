@@ -33,7 +33,7 @@
 
       <!-- Settings tab -->
       <TabItem Header="Settings">
-        <pgc:PropertyGrid SelectedObject="{Binding EditCopy}"
+        <pgc:PropertyGrid DataContext="{Binding EditCopy}"
                           ShowTitle="False"
                           Margin="4"/>
       </TabItem>
@@ -43,7 +43,7 @@
         <DockPanel Margin="8">
 
           <!-- Links row -->
-          <WrapPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+          <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <Button Content="GitHub" Command="{Binding OpenGitHubCommand}"/>
             <Button Content="Send Feedback" Command="{Binding OpenFeedbackCommand}"/>
             <Button Content="Install Folder" Command="{Binding OpenInstallFolderCommand}"/>
@@ -74,7 +74,7 @@
                    IsReadOnly="True"
                    AcceptsReturn="True"
                    TextWrapping="Wrap"
-                   VerticalScrollBarVisibility="Auto"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                    FontSize="11"/>
 
         </DockPanel>

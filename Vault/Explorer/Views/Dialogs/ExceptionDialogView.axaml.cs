@@ -23,7 +23,7 @@ namespace Microsoft.Vault.Explorer.Views.Dialogs
 
         private void QuitButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (Application.Current?.ApplicationLifetime is
+            if (Avalonia.Application.Current?.ApplicationLifetime is
                 Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
                 desktop.Shutdown(1);
             else

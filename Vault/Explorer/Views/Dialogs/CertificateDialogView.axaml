@@ -42,7 +42,7 @@
                 Orientation="Horizontal"
                 Spacing="6"
                 Margin="0,0,0,6"
-                IsVisible="{Binding Versions.Count, Converter={x:Static BoolConverters.IsNotNull}}">
+                IsVisible="{Binding Versions.Count, Converter={x:Static ObjectConverters.IsNotNull}}">
       <TextBlock Text="Version:" VerticalAlignment="Center"/>
       <ComboBox ItemsSource="{Binding Versions}"
                 SelectedItem="{Binding SelectedVersion}"
@@ -71,7 +71,7 @@
 
       <!-- Property grid -->
       <pgc:PropertyGrid Grid.Column="2"
-                        SelectedObject="{Binding PropertyObject}"
+                        DataContext="{Binding PropertyObject}"
                         ShowTitle="False"/>
     </Grid>
 

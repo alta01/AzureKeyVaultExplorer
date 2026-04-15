@@ -18,6 +18,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
     using Avalonia.Platform.Storage;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Model;
+    using Microsoft.Vault.Explorer.Model.ContentTypes;
     using Microsoft.Vault.Explorer.Model.Files.Aliases;
     using Microsoft.Vault.Explorer.Services;
     using Microsoft.Vault.Library;
@@ -172,14 +173,14 @@ namespace Microsoft.Vault.Explorer.ViewModels
             _notifications = notifications;
 
             // canExecute predicates
-            var hasVault = this.WhenAnyValue(x => x.CurrentVault, v => v != null);
-            var notBusy = this.WhenAnyValue(x => x.IsBusy, b => !b);
+            var hasVault = this.WhenAnyValue(x => x.CurrentVault).Select(v => v != null);
+            var notBusy = this.WhenAnyValue(x => x.IsBusy).Select(b => !b);
             var canOperate = Observable.CombineLatest(hasVault, notBusy, (v, nb) => v && nb);
-            var hasSingleItem = this.WhenAnyValue(x => x.SelectedItem, v => v != null);
-            var hasSingleActive = this.WhenAnyValue(
-                x => x.SelectedItem, v => v != null && v.Enabled && v.Active);
-            var hasAnySelection = this.WhenAnyValue(
-                x => x.SelectedItems, items => items != null && items.Count > 0);
+            var hasSingleItem = this.WhenAnyValue(x => x.SelectedItem).Select(v => v != null);
+            var hasSingleActive = this.WhenAnyValue(x => x.SelectedItem)
+                .Select(v => v != null && v.Enabled && v.Active);
+            var hasAnySelection = this.WhenAnyValue(x => x.SelectedItems)
+                .Select(items => items != null && items.Count > 0);
 
             RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync, canOperate);
             AddSecretCommand = ReactiveCommand.CreateFromTask(AddSecretAsync, canOperate);
@@ -232,7 +233,8 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 .DisposeWith(_disposables);
 
             // Update item count whenever the collection changes
-            VaultListViewModel.Items.CollectionChanged += (_, _) => UpdateItemCountText();
+            ((System.Collections.Specialized.INotifyCollectionChanged)VaultListViewModel.Items)
+                .CollectionChanged += (_, _) => UpdateItemCountText();
 
             PopulateVaultAliases();
         }
@@ -244,7 +246,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
             VaultAliases.Clear();
             try
             {
-                var aliases = Utils.LoadFromJsonFile<VaultAliases>(
+                var aliases = Common.Utils.LoadFromJsonFile<VaultAliases>(
                     AppSettings.Default.VaultAliasesJsonFileLocation, isOptional: true);
                 foreach (var alias in aliases)
                 {
@@ -355,7 +357,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
             try
             {
                 var vault = new Library.Vault(
-                    Utils.FullPathToJsonFile(AppSettings.Default.VaultsJsonFileLocation),
+                    Common.Utils.FullPathToJsonFile(AppSettings.Default.VaultsJsonFileLocation),
                     VaultAccessTypeEnum.ReadWrite,
                     CurrentVaultAlias.VaultNames);
 

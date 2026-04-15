@@ -128,7 +128,7 @@
                 CanUserResizeColumns="True"
                 CanUserSortColumns="True"
                 GridLinesVisibility="Horizontal"
-                AllowDrop="True">
+                >
         <DataGrid.Columns>
           <DataGridTextColumn Header="Name"
                               Binding="{Binding Name}"
@@ -153,7 +153,7 @@
 
       <!-- Property panel -->
       <pgc:PropertyGrid Grid.Column="2"
-                        SelectedObject="{Binding SelectedItem}"
+                        DataContext="{Binding SelectedItem}"
                         ShowTitle="False"/>
     </Grid>
 

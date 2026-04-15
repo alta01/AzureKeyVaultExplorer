@@ -32,8 +32,8 @@
              FontFamily="Cascadia Mono,Consolas,Courier New,monospace"
              FontSize="11"
              TextWrapping="NoWrap"
-             HorizontalScrollBarVisibility="Auto"
-             VerticalScrollBarVisibility="Auto"/>
+             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
 
   </DockPanel>
 </Window>

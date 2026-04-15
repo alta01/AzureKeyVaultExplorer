@@ -14,6 +14,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
     using System.Threading.Tasks;
     using Azure.ResourceManager;
     using Azure.ResourceManager.KeyVault;
+    using Azure.ResourceManager.Resources;
     using Microsoft.Identity.Client;
     using Microsoft.Vault.Explorer.Dialogs.Subscriptions;
     using Microsoft.Vault.Explorer.Model.Files.Aliases;

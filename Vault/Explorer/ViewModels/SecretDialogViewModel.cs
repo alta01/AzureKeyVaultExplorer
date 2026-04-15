@@ -15,6 +15,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
     using Azure.Security.KeyVault.Secrets;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Controls.MenuItems;
+    using Microsoft.Vault.Explorer.Model.Collections;
     using Microsoft.Vault.Explorer.Dialogs;
     using Microsoft.Vault.Explorer.Model;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
@@ -192,7 +193,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
             ToggleMaskCommand = ReactiveCommand.Create(ToggleMask);
             NewPasswordCommand = ReactiveCommand.Create(
-                () => { if (!IsCertificateMode) SetValue(Utils.NewSecurePassword()); });
+                () => { if (!IsCertificateMode) SetValue(Common.Utils.NewSecurePassword()); });
             NewGuidCommand = ReactiveCommand.Create(
                 () => { if (!IsCertificateMode) SetValue(Guid.NewGuid().ToString("D")); });
             NewApiKeyCommand = ReactiveCommand.Create(
@@ -428,7 +429,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
         private void AutoDetectSecretKind()
         {
             var obj = (PropertyObjectSecret)PropertyObject;
-            var skTag = obj.Tags?.GetOrNull(new Controls.MenuItems.TagItem(Consts.SecretKindKey, ""));
+            var skTag = obj.Tags?.GetOrNull(new TagItem(Consts.SecretKindKey, ""));
             SecretKind? found = skTag != null
                 ? SecretKinds.FirstOrDefault(sk => sk.Alias == skTag.Value)
                 : null;

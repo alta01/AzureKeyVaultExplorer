@@ -66,7 +66,7 @@ namespace Microsoft.Vault.Explorer.Model.PropObjects
         [Category("Policy")]
         [DisplayName("Key Type")]
         [ReadOnly(true)]
-        public string KeyType => this.CertificatePolicy?.KeyType;
+        public string KeyType => this.CertificatePolicy?.KeyType?.ToString() ?? "";
 
         [Category("Policy")]
         [DisplayName("Key Size")]

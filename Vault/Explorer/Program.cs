@@ -3,8 +3,10 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using Avalonia;
 using Avalonia.ReactiveUI;
+using Microsoft.Vault.Explorer.Common;
 using Microsoft.Vault.Library;
 
 namespace Microsoft.Vault.Explorer;
@@ -20,8 +22,8 @@ internal static class Program
 
         // Initialise default user name used when constructing vault access tokens.
         Globals.DefaultUserName =
-            AppSettings.Default.UserAccountNamesList.Count > 0
-                ? AppSettings.Default.UserAccountNamesList[0]
+            AppSettings.Default.UserAccountNamesList.Any()
+                ? AppSettings.Default.UserAccountNamesList.First()
                 : Environment.UserName;
 
         // Register vault:// protocol handler (Windows = registry, macOS = plist helper,
@@ -57,7 +59,6 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .WithInterFont()
             .UseReactiveUI()
             .LogToTrace();
 

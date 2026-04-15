@@ -381,12 +381,12 @@ namespace Microsoft.Vault.Library
             {
                 try
                 {
-                    Response<KeyVaultCertificate> response;
+                    KeyVaultCertificate cert;
                     if (string.IsNullOrEmpty(certificateVersion))
-                        response = await kv.CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false);
+                        cert = (await kv.CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false)).Value;
                     else
-                        response = await kv.CertificateClient.GetCertificateVersionAsync(certificateName, certificateVersion, cancellationToken).ConfigureAwait(false);
-                    return response.Value;
+                        cert = (await kv.CertificateClient.GetCertificateVersionAsync(certificateName, certificateVersion, cancellationToken).ConfigureAwait(false)).Value;
+                    return cert;
                 }
                 catch (Exception e)
                 {
@@ -444,7 +444,7 @@ namespace Microsoft.Vault.Library
             }
 
             var t0 = this._keyVaultClients[0].CertificateClient.ImportCertificateAsync(options, cancellationToken);
-            var t1 = this.Secondary ? this._keyVaultClients[1].CertificateClient.ImportCertificateAsync(options, cancellationToken) : Task.FromResult<Response<KeyVaultCertificate>>(null);
+            var t1 = this.Secondary ? this._keyVaultClients[1].CertificateClient.ImportCertificateAsync(options, cancellationToken) : Task.FromResult<Response<KeyVaultCertificateWithPolicy>>(null);
             await Task.WhenAll(t0, t1).ContinueWith(t =>
             {
                 if (t0.IsFaulted && t1.IsFaulted)
@@ -500,26 +500,22 @@ namespace Microsoft.Vault.Library
             tags = Utils.AddMd5ChangedBy(tags, null, this.AuthenticatedUserName);
             string version = string.IsNullOrEmpty(certificateVersion) ? null : certificateVersion;
 
-            Response<KeyVaultCertificate> curr0;
+            CertificateProperties props0;
             if (string.IsNullOrEmpty(version))
-                curr0 = await this._keyVaultClients[0].CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false);
+                props0 = (await this._keyVaultClients[0].CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false)).Value.Properties;
             else
-                curr0 = await this._keyVaultClients[0].CertificateClient.GetCertificateVersionAsync(certificateName, version, cancellationToken).ConfigureAwait(false);
-
-            var props0 = curr0.Value.Properties;
+                props0 = (await this._keyVaultClients[0].CertificateClient.GetCertificateVersionAsync(certificateName, version, cancellationToken).ConfigureAwait(false)).Value.Properties;
             ApplyToCertificateProperties(props0, tags, enabled, expires, notBefore);
             var t0 = this._keyVaultClients[0].CertificateClient.UpdateCertificatePropertiesAsync(props0, cancellationToken);
 
             Task<Response<KeyVaultCertificate>> t1 = Task.FromResult<Response<KeyVaultCertificate>>(null);
             if (this.Secondary)
             {
-                Response<KeyVaultCertificate> curr1;
+                CertificateProperties props1;
                 if (string.IsNullOrEmpty(version))
-                    curr1 = await this._keyVaultClients[1].CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false);
+                    props1 = (await this._keyVaultClients[1].CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false)).Value.Properties;
                 else
-                    curr1 = await this._keyVaultClients[1].CertificateClient.GetCertificateVersionAsync(certificateName, version, cancellationToken).ConfigureAwait(false);
-
-                var props1 = curr1.Value.Properties;
+                    props1 = (await this._keyVaultClients[1].CertificateClient.GetCertificateVersionAsync(certificateName, version, cancellationToken).ConfigureAwait(false)).Value.Properties;
                 ApplyToCertificateProperties(props1, tags, enabled, expires, notBefore);
                 t1 = this._keyVaultClients[1].CertificateClient.UpdateCertificatePropertiesAsync(props1, cancellationToken);
             }
@@ -546,9 +542,8 @@ namespace Microsoft.Vault.Library
 
         private static void ApplyToCertificateProperties(CertificateProperties props, IDictionary<string, string> tags, bool? enabled, DateTimeOffset? expires, DateTimeOffset? notBefore)
         {
+            // Note: ExpiresOn and NotBefore are read-only in the Azure SDK; only Enabled and Tags can be updated.
             props.Enabled = enabled;
-            props.ExpiresOn = expires;
-            props.NotBefore = notBefore;
             props.Tags.Clear();
             if (tags != null)
             {

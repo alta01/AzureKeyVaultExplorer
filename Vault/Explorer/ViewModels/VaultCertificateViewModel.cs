@@ -116,8 +116,11 @@ namespace Microsoft.Vault.Explorer.ViewModels
             return this;
         }
 
-        public override Task<IEnumerable<object>> GetVersionsAsync(CancellationToken ct) =>
-            Session.CurrentVault.GetCertificateVersionsAsync(Name, 0, ct);
+        public override async Task<IEnumerable<object>> GetVersionsAsync(CancellationToken ct)
+        {
+            var versions = await Session.CurrentVault.GetCertificateVersionsAsync(Name, 0, ct);
+            return versions.Cast<object>();
+        }
 
         // ── New / update helpers (called from dialog ViewModels in Phase 3) ────
 

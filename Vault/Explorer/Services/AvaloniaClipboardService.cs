@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 

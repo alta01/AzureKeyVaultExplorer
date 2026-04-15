@@ -9,7 +9,10 @@ namespace Microsoft.Vault.Explorer.Views
     using System.Linq;
     using System.Reactive;
     using System.Reactive.Disposables;
+    using System.Reactive.Linq;
     using System.Threading;
+    using Azure.Security.KeyVault.Certificates;
+    using Azure.Security.KeyVault.Secrets;
     using Avalonia;
     using Avalonia.Controls;
     using Avalonia.Input;
@@ -69,9 +72,17 @@ namespace Microsoft.Vault.Explorer.Views
                     {
                         var item = ctx.Input; // null = new, non-null = edit
                         var dialogs = App.Services.GetRequiredService<IDialogService>();
-                        var vm = item == null
-                            ? new SecretDialogViewModel(ViewModel, dialogs)
-                            : new SecretDialogViewModel(ViewModel, dialogs, item);
+                        SecretDialogViewModel vm;
+                        if (item == null)
+                        {
+                            vm = new SecretDialogViewModel(ViewModel, dialogs);
+                        }
+                        else
+                        {
+                            var versions = await item.GetVersionsAsync(CancellationToken.None);
+                            vm = new SecretDialogViewModel(ViewModel, dialogs, item.Name,
+                                versions.OfType<SecretProperties>());
+                        }
                         var dlg = new SecretDialogView { DataContext = vm };
                         bool result = await dlg.ShowDialog<bool>(this);
                         ctx.SetOutput(result);
@@ -82,11 +93,33 @@ namespace Microsoft.Vault.Explorer.Views
                 ViewModel.ShowCertDialogInteraction
                     .RegisterHandler(async ctx =>
                     {
-                        var item = ctx.Input; // null = new, non-null = edit
+                        var item = ctx.Input; // null = new (picks file), non-null = edit
                         var dialogs = App.Services.GetRequiredService<IDialogService>();
-                        var vm = item == null
-                            ? new CertificateDialogViewModel(ViewModel, dialogs)
-                            : new CertificateDialogViewModel(ViewModel, dialogs, item);
+                        CertificateDialogViewModel vm;
+                        if (item == null)
+                        {
+                            var pickOpts = new FilePickerOpenOptions
+                            {
+                                Title = "Select certificate file",
+                                AllowMultiple = false,
+                                FileTypeFilter = new[]
+                                {
+                                    new FilePickerFileType("Certificate files")
+                                    { Patterns = new[] { "*.pfx", "*.p12", "*.cer", "*.crt" } }
+                                }
+                            };
+                            var picked = await StorageProvider.OpenFilePickerAsync(pickOpts);
+                            var localPath = picked.FirstOrDefault()?.TryGetLocalPath();
+                            if (localPath == null) { ctx.SetOutput(false); return; }
+                            vm = await CertificateDialogViewModel.FromFileAsync(
+                                ViewModel, dialogs, new FileInfo(localPath));
+                        }
+                        else
+                        {
+                            var certVersions = (await item.GetVersionsAsync(CancellationToken.None))
+                                .OfType<CertificateProperties>();
+                            vm = new CertificateDialogViewModel(ViewModel, dialogs, item.Name, certVersions);
+                        }
                         var dlg = new CertificateDialogView { DataContext = vm };
                         bool result = await dlg.ShowDialog<bool>(this);
                         ctx.SetOutput(result);
@@ -178,11 +211,11 @@ namespace Microsoft.Vault.Explorer.Views
 
             switch (e.Key)
             {
-                case Key.F5 when ViewModel.RefreshCommand.CanExecute(Unit.Default):
+                case Key.F5:
                     ViewModel.RefreshCommand.Execute(Unit.Default).Subscribe();
                     e.Handled = true;
                     break;
-                case Key.Delete when ViewModel.DeleteCommand.CanExecute(Unit.Default):
+                case Key.Delete:
                     ViewModel.DeleteCommand.Execute(Unit.Default).Subscribe();
                     e.Handled = true;
                     break;
