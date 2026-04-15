@@ -95,7 +95,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 this.RaiseAndSetIfChanged(ref _selectedTheme, value);
                 if (value == null) return;
                 EditCopy.Theme = value.Name;
-                IsDirty = true;
+                if (!_constructing) IsDirty = true;
                 App.ApplyTheme(value.Name);
             }
         }
@@ -110,7 +110,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 if (value?.Value is TimeSpan ts)
                 {
                     EditCopy.CopyToClipboardTimeToLive = ts;
-                    IsDirty = true;
+                    if (!_constructing) IsDirty = true;
                 }
             }
         }
@@ -125,7 +125,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 if (value?.Value is TimeSpan ts)
                 {
                     EditCopy.AboutToExpireWarningPeriod = ts;
-                    IsDirty = true;
+                    if (!_constructing) IsDirty = true;
                 }
                 this.RaisePropertyChanged(nameof(IsCustomExpiry));
             }
@@ -158,7 +158,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 this.RaiseAndSetIfChanged(ref _selectedExpiredColor, value);
                 if (value == null) return;
                 EditCopy.ExpiredItemColor = value.Label;
-                IsDirty = true;
+                if (!_constructing) IsDirty = true;
             }
         }
 
@@ -171,7 +171,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 this.RaiseAndSetIfChanged(ref _selectedExpiringColor, value);
                 if (value == null) return;
                 EditCopy.AboutToExpireItemColor = value.Label;
-                IsDirty = true;
+                if (!_constructing) IsDirty = true;
             }
         }
 
@@ -184,7 +184,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 this.RaiseAndSetIfChanged(ref _selectedDisabledColor, value);
                 if (value == null) return;
                 EditCopy.DisabledItemColor = value.Label;
-                IsDirty = true;
+                if (!_constructing) IsDirty = true;
             }
         }
 
@@ -226,6 +226,9 @@ namespace Microsoft.Vault.Explorer.ViewModels
             get => _isDirty;
             set => this.RaiseAndSetIfChanged(ref _isDirty, value);
         }
+
+        // ── Construction guard (prevents binding initialisation from dirtying state) ──
+        private bool _constructing = true;
 
         // ── Constructor ────────────────────────────────────────────────────────
 
@@ -283,6 +286,9 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 name => !string.IsNullOrWhiteSpace(name) && !AccountNames.Contains(name.Trim()));
             AddAccountCommand = ReactiveCommand.Create(AddAccount, canAddAccount);
             RemoveAccountCommand = ReactiveCommand.Create<string>(RemoveAccount);
+
+            // Initialisation complete — bindings can now mark the form dirty
+            _constructing = false;
         }
 
         // ── Private helpers ────────────────────────────────────────────────────
@@ -319,11 +325,26 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         private void Save()
         {
+            // Validate config file paths before persisting
+            ValidatePathField(EditCopy.JsonConfigurationFilesRoot, "JSON configuration files root");
+            ValidatePathField(EditCopy.VaultsJsonFileLocation, "Vaults JSON file location");
+
             var target = AppSettings.Default;
             target.CopyFrom(EditCopy);
             target.UserAccountNames = string.Join("\n", AccountNames);
             target.Save();
             IsDirty = false;
+        }
+
+        private static void ValidatePathField(string path, string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return;  // empty is fine (use default)
+            // Reject path traversal components
+            if (path.Contains(".."))
+                throw new ArgumentException($"{fieldName}: path traversal ('..') is not allowed.");
+            // Must be absolute or empty
+            if (!System.IO.Path.IsPathRooted(path))
+                throw new ArgumentException($"{fieldName}: must be an absolute path.");
         }
 
         private static AppSettings CloneSettings()

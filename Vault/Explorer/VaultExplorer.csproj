@@ -25,10 +25,10 @@
   <!-- ── Packages ─────────────────────────────────────────────────────────── -->
   <ItemGroup>
     <!-- Azure SDK -->
-    <PackageReference Include="Azure.ResourceManager" Version="1.9.0" />
-    <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.2.0" />
-    <PackageReference Include="Azure.Identity" Version="1.13.0" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.77.1" />
+    <PackageReference Include="Azure.ResourceManager" Version="1.14.0" />
+    <PackageReference Include="Azure.ResourceManager.KeyVault" Version="1.3.3" />
+    <PackageReference Include="Azure.Identity" Version="1.13.1" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.83.3" />
     <!-- Avalonia UI stack -->
     <PackageReference Include="Avalonia" Version="11.3.8" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
@@ -40,11 +40,13 @@
     <!-- bodong.Avalonia.PropertyGrid replaces WinForms PropertyGrid -->
     <PackageReference Include="bodong.Avalonia.PropertyGrid" Version="11.3.0.12" />
     <!-- DynamicData for reactive list filtering -->
-    <PackageReference Include="DynamicData" Version="9.0.4" />
+    <PackageReference Include="DynamicData" Version="9.4.1" />
     <!-- DI container -->
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <!-- Cross-platform secret file encryption (replaces Windows-only DPAPI) -->
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.0" />
+    <!-- Material Design vector icons — crisp at all DPIs -->
+    <PackageReference Include="Material.Icons.Avalonia" Version="2.1.0" />
   </ItemGroup>
 
   <!-- ── AXAML compilation ─────────────────────────────────────────────────── -->
@@ -82,6 +84,8 @@
   <ItemGroup>
     <AvaloniaResource Include="Resources\**" />
     <AvaloniaResource Include="Themes\**" />
+    <!-- App icon embedded for avares:// URI (taskbar icon on Linux) -->
+    <AvaloniaResource Include="VaultExplorer.png" />
   </ItemGroup>
 
   <!-- ── Static content ───────────────────────────────────────────────────── -->

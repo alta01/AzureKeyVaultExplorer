@@ -126,27 +126,9 @@ namespace Microsoft.Vault.Explorer.Views
                     })
                     .DisposeWith(d);
 
-                // ── DataGrid multi-selection → SelectedItems ──────────────────
-                var grid = this.FindControl<DataGrid>("ItemsDataGrid");
-                if (grid != null)
-                {
-                    grid.SelectionChanged += OnDataGridSelectionChanged;
-                    Disposable.Create(() => grid.SelectionChanged -= OnDataGridSelectionChanged)
-                        .DisposeWith(d);
-                }
-
-                // ── Drag-and-drop into the list ───────────────────────────────
-                if (grid != null)
-                {
-                    DragDrop.SetAllowDrop(grid, true);
-                    grid.AddHandler(DragDrop.DropEvent, OnGridDrop);
-                    grid.AddHandler(DragDrop.DragOverEvent, OnGridDragOver);
-                    Disposable.Create(() =>
-                    {
-                        grid.RemoveHandler(DragDrop.DropEvent, OnGridDrop);
-                        grid.RemoveHandler(DragDrop.DragOverEvent, OnGridDragOver);
-                    }).DisposeWith(d);
-                }
+                // DataGrid multi-selection and drag-drop are wired via AXAML event handlers
+                // (SelectionChanged="OnDataGridSelectionChanged", Drop="OnGridDrop", DragOver="OnGridDragOver")
+                // so no FindControl needed here.
             });
         }
 
@@ -164,6 +146,23 @@ namespace Microsoft.Vault.Explorer.Views
 
             // Drive SelectedItem from the grid's primary selection
             ViewModel.SelectedItem = grid.SelectedItem as VaultItemViewModel;
+        }
+
+        // ── DataGrid Loaded/Unloaded — wire drag-drop per tab DataGrid ────────
+
+        private void OnDataGridLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (sender is not DataGrid grid) return;
+            DragDrop.SetAllowDrop(grid, true);
+            grid.AddHandler(DragDrop.DropEvent, OnGridDrop);
+            grid.AddHandler(DragDrop.DragOverEvent, OnGridDragOver);
+        }
+
+        private void OnDataGridUnloaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (sender is not DataGrid grid) return;
+            grid.RemoveHandler(DragDrop.DropEvent, OnGridDrop);
+            grid.RemoveHandler(DragDrop.DragOverEvent, OnGridDragOver);
         }
 
         // ── Drag-and-drop (drop files onto the list to add them) ──────────────

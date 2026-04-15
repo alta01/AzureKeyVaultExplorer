@@ -122,6 +122,29 @@ namespace Microsoft.Vault.Explorer.ViewModels
             private set => this.RaiseAndSetIfChanged(ref _statusText, value);
         }
 
+        // ── Accessibility check ────────────────────────────────────────────────
+        private bool _isCheckingAccess;
+        public bool IsCheckingAccess
+        {
+            get => _isCheckingAccess;
+            private set => this.RaiseAndSetIfChanged(ref _isCheckingAccess, value);
+        }
+
+        // null = not run yet; "" = reachable; non-empty = error message
+        private string? _accessCheckResult;
+        public string? AccessCheckResult
+        {
+            get => _accessCheckResult;
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref _accessCheckResult, value);
+                UpdateCanConfirm();
+            }
+        }
+
+        public bool AccessCheckOk => AccessCheckResult == "";
+        public bool AccessCheckFailed => AccessCheckResult is { Length: > 0 };
+
         // ── Result ─────────────────────────────────────────────────────────────
         private VaultAlias? _currentVaultAlias;
         public VaultAlias? CurrentVaultAlias
@@ -130,9 +153,12 @@ namespace Microsoft.Vault.Explorer.ViewModels
             private set
             {
                 this.RaiseAndSetIfChanged(ref _currentVaultAlias, value);
-                CanConfirm = value != null;
+                UpdateCanConfirm();
             }
         }
+
+        private void UpdateCanConfirm() =>
+            CanConfirm = CurrentVaultAlias != null && AccessCheckResult == "";
 
         private bool _canConfirm;
         public bool CanConfirm
@@ -314,6 +340,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 Vaults.Clear();
                 VaultDetails = null;
                 CurrentVaultAlias = null;
+                AccessCheckResult = null;
 
                 if (subs?.Subscriptions == null || subs.Subscriptions.Length == 0)
                 {
@@ -353,6 +380,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 Vaults.Clear();
                 VaultDetails = null;
                 CurrentVaultAlias = null;
+                AccessCheckResult = null;
 
                 await foreach (var v in subResource.GetKeyVaultsAsync())
                     Vaults.Add(new VaultItem(v, subItem));
@@ -372,6 +400,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
         private async Task LoadVaultDetailsAsync(VaultItem? vaultItem)
         {
             CurrentVaultAlias = null;
+            AccessCheckResult = null;
             VaultDetails = null;
             if (vaultItem == null || _currentAccount == null) return;
 
@@ -394,6 +423,10 @@ namespace Microsoft.Vault.Explorer.ViewModels
                     UserAlias = _currentAccount.UserAlias,
                     IsNew = true,
                 };
+
+                // Run a quick network reachability check against the vault endpoint
+                _ = CheckVaultAccessAsync(vault.Data.Properties.VaultUri?.ToString()
+                    ?? $"https://{vaultItem.Name}.vault.azure.net/");
             }
             catch (Exception ex)
             {
@@ -404,6 +437,41 @@ namespace Microsoft.Vault.Explorer.ViewModels
             {
                 IsBusy = false;
                 StatusText = "";
+            }
+        }
+
+        private async Task CheckVaultAccessAsync(string vaultUri)
+        {
+            IsCheckingAccess = true;
+            AccessCheckResult = null;
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                // An unauthenticated GET to the vault secrets endpoint returns 401 if the vault
+                // is reachable and exists, or throws if not network-accessible.
+                var response = await _httpClient.GetAsync(
+                    $"{vaultUri.TrimEnd('/')}/secrets?api-version=7.4", cts.Token);
+
+                // 401 = vault reachable, auth needed (expected); 403 = reachable, access denied
+                AccessCheckResult = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.Unauthorized => "",     // reachable, OK to proceed
+                    System.Net.HttpStatusCode.Forbidden =>
+                        "Access denied — verify your RBAC role (Key Vault Reader / Secrets User)",
+                    _ => "",    // any other response also means the vault is reachable
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                AccessCheckResult = "Network timeout — check connectivity to Azure Key Vault";
+            }
+            catch (HttpRequestException ex)
+            {
+                AccessCheckResult = $"Network error — {ex.Message}";
+            }
+            finally
+            {
+                IsCheckingAccess = false;
             }
         }
 

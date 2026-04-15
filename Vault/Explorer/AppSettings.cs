@@ -39,7 +39,7 @@ public sealed class AppSettings : INotifyPropertyChanged
 
     [Browsable(false)]
     [JsonProperty]
-    public string Theme { get; set; } = "Ocean Depths";
+    public string Theme { get; set; } = "Arctic Frost";
 
     // ── General ──────────────────────────────────────────────────────────────
 

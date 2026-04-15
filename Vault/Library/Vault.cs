@@ -127,9 +127,12 @@ namespace Microsoft.Vault.Library
 
         private static VaultsConfig DeserializeVaultsConfigFromFile(ref string vaultsConfigFile)
         {
+            // TypeNameHandling.None is safe — polymorphism for VaultAccess subtypes is handled
+            // per-property via [JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]
+            // on VaultAccessType.ReadOnly and VaultAccessType.ReadWrite.
             var settings = new JsonSerializerSettings
             {
-                TypeNameHandling = TypeNameHandling.Auto,
+                TypeNameHandling = TypeNameHandling.None,
             };
             if (string.IsNullOrWhiteSpace(vaultsConfigFile))
             {
@@ -186,10 +189,10 @@ namespace Microsoft.Vault.Library
             {
                 try
                 {
-                    var response = await kv.SecretClient.GetSecretAsync(
+                    var response = await WithRetry(() => kv.SecretClient.GetSecretAsync(
                         secretName,
                         string.IsNullOrEmpty(secretVersion) ? null : secretVersion,
-                        cancellationToken).ConfigureAwait(false);
+                        cancellationToken)).ConfigureAwait(false);
                     return response.Value;
                 }
                 catch (Exception e)
@@ -297,6 +300,25 @@ namespace Microsoft.Vault.Library
         }
 
         /// <summary>
+        /// Retries <paramref name="operation"/> up to <paramref name="maxAttempts"/> times with
+        /// exponential back-off when the server returns HTTP 429 (throttled).
+        /// </summary>
+        private static async Task<T> WithRetry<T>(Func<Task<T>> operation, int maxAttempts = 3)
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    return await operation().ConfigureAwait(false);
+                }
+                catch (RequestFailedException rfe) when (rfe.Status == 429 && attempt < maxAttempts)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt))).ConfigureAwait(false);
+                }
+            }
+        }
+
+        /// <summary>
         ///     List all secrets from specified vault
         /// </summary>
         public async Task<IEnumerable<SecretProperties>> ListSecretsAsync(int regionIndex = 0, ListOperationProgressUpdate listSecretsProgressUpdate = null, CancellationToken cancellationToken = default)
@@ -383,9 +405,9 @@ namespace Microsoft.Vault.Library
                 {
                     KeyVaultCertificate cert;
                     if (string.IsNullOrEmpty(certificateVersion))
-                        cert = (await kv.CertificateClient.GetCertificateAsync(certificateName, cancellationToken).ConfigureAwait(false)).Value;
+                        cert = (await WithRetry(() => kv.CertificateClient.GetCertificateAsync(certificateName, cancellationToken))).Value;
                     else
-                        cert = (await kv.CertificateClient.GetCertificateVersionAsync(certificateName, certificateVersion, cancellationToken).ConfigureAwait(false)).Value;
+                        cert = (await WithRetry(() => kv.CertificateClient.GetCertificateVersionAsync(certificateName, certificateVersion, cancellationToken))).Value;
                     return cert;
                 }
                 catch (Exception e)

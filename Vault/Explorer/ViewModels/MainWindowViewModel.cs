@@ -38,11 +38,33 @@ namespace Microsoft.Vault.Explorer.ViewModels
         private readonly CompositeDisposable _disposables = new();
 
         // ── ISession ───────────────────────────────────────────────────────────
-        VaultAlias ISession.CurrentVaultAlias => CurrentVaultAlias!;
-        Library.Vault ISession.CurrentVault => CurrentVault!;
-        public VaultListViewModel VaultListViewModel { get; } = new();
+        VaultAlias ISession.CurrentVaultAlias => SelectedTab?.VaultAlias ?? CurrentVaultAlias!;
+        Library.Vault ISession.CurrentVault => SelectedTab?.Vault ?? CurrentVault!;
 
-        // ── Public vault state (used by AXAML bindings and ISession) ───────────
+        // Proxy VaultListViewModel through the active tab (fallback to empty for bindings)
+        private readonly VaultListViewModel _emptyVaultList = new();
+        public VaultListViewModel VaultListViewModel => SelectedTab?.VaultList ?? _emptyVaultList;
+
+        // ── Vault tabs ─────────────────────────────────────────────────────────
+        public ObservableCollection<VaultTabViewModel> Tabs { get; } = new();
+        public bool HasTabs => Tabs.Count > 0;
+
+        private VaultTabViewModel? _selectedTab;
+        public VaultTabViewModel? SelectedTab
+        {
+            get => _selectedTab;
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _selectedTab, value);
+                this.RaisePropertyChanged(nameof(VaultListViewModel));
+                // Sync legacy properties for code that still reads them
+                CurrentVaultAlias = value?.VaultAlias;
+                CurrentVault = value?.Vault;
+                UpdateItemCountText();
+            }
+        }
+
+        // ── Public vault state (legacy — kept for code-behind and OnClosing) ───
         public VaultAlias? CurrentVaultAlias { get; private set; }
         public Library.Vault? CurrentVault { get; private set; }
 
@@ -233,9 +255,20 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 })
                 .DisposeWith(_disposables);
 
-            // Update item count whenever the collection changes
-            ((System.Collections.Specialized.INotifyCollectionChanged)VaultListViewModel.Items)
-                .CollectionChanged += (_, _) => UpdateItemCountText();
+            // Wire tab close commands: remove tab from collection when closed
+            Tabs.CollectionChanged += (_, e) =>
+            {
+                this.RaisePropertyChanged(nameof(HasTabs));
+                if (e.NewItems != null)
+                    foreach (VaultTabViewModel tab in e.NewItems)
+                        tab.CloseCommand.Subscribe(t =>
+                        {
+                            Tabs.Remove(t);
+                            t.Dispose();
+                            if (SelectedTab == t)
+                                SelectedTab = Tabs.LastOrDefault();
+                        }).DisposeWith(_disposables);
+            };
 
             PopulateVaultAliases();
         }
@@ -345,40 +378,63 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         private async Task RefreshAsync(CancellationToken _ = default)
         {
-            if (CurrentVaultAlias == null) return;
+            var alias = CurrentVaultAlias;
+            if (alias == null) return;
+            await OpenVaultTabAsync(alias);
+        }
 
+        /// <summary>Opens a new tab for the given alias (or refreshes if already open).</summary>
+        private async Task OpenVaultTabAsync(VaultAlias alias)
+        {
             using var cts = new CancellationTokenSource();
             _cts = cts;
             IsBusy = true;
-            StatusText = "Connecting to vault...";
-            VaultListViewModel.Clear();
-            SelectedItem = null;
             Title = Globals.AppName;
 
-            try
+            // Reuse existing tab for the same alias, or create a new one
+            var existingTab = Tabs.FirstOrDefault(t =>
+                string.Equals(t.VaultAlias.Alias, alias.Alias, StringComparison.OrdinalIgnoreCase));
+
+            VaultTabViewModel tab;
+            if (existingTab != null)
             {
+                tab = existingTab;
+                tab.VaultList.Clear();
+                SelectedItem = null;
+            }
+            else
+            {
+                StatusText = "Connecting to vault...";
                 var vault = new Library.Vault(
                     Common.Utils.FullPathToJsonFile(AppSettings.Default.VaultsJsonFileLocation),
                     VaultAccessTypeEnum.ReadWrite,
-                    CurrentVaultAlias.VaultNames);
+                    alias.VaultNames);
 
-                if (!string.IsNullOrWhiteSpace(CurrentVaultAlias.UserAlias)
-                    || vault.VaultsConfig.Count == 0)
+                if (!string.IsNullOrWhiteSpace(alias.UserAlias) || vault.VaultsConfig.Count == 0)
                 {
-                    vault.VaultsConfig[CurrentVaultAlias.VaultNames[0]] = new VaultAccessType(
-                        new VaultAccess[] { new VaultAccessUserInteractive(CurrentVaultAlias.DomainHint, CurrentVaultAlias.UserAlias) },
-                        new VaultAccess[] { new VaultAccessUserInteractive(CurrentVaultAlias.DomainHint, CurrentVaultAlias.UserAlias) });
+                    vault.VaultsConfig[alias.VaultNames[0]] = new VaultAccessType(
+                        new VaultAccess[] { new VaultAccessUserInteractive(alias.DomainHint, alias.UserAlias) },
+                        new VaultAccess[] { new VaultAccessUserInteractive(alias.DomainHint, alias.UserAlias) });
                 }
 
-                CurrentVault = vault;
-                CurrentVaultAlias.SecretsCollectionEnabled = false;
-                CurrentVaultAlias.CertificatesCollectionEnabled = false;
+                tab = new VaultTabViewModel(alias, vault);
+                Tabs.Add(tab);
+            }
 
-                int s = 0, c = 0;
+            SelectedTab = tab;
+            CurrentVaultAlias = alias;
+            CurrentVault = tab.Vault;
 
+            alias.SecretsCollectionEnabled = false;
+            alias.CertificatesCollectionEnabled = false;
+
+            int s = 0, c = 0;
+
+            try
+            {
                 var secretsTask = Task.Run(async () =>
                 {
-                    var secrets = await CurrentVault.ListSecretsAsync(0, p =>
+                    var secrets = await tab.Vault.ListSecretsAsync(0, p =>
                     {
                         s = p;
                         Avalonia.Threading.Dispatcher.UIThread.Post(
@@ -388,14 +444,14 @@ namespace Microsoft.Vault.Explorer.ViewModels
                     Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                     {
                         foreach (var sp in secrets)
-                            VaultListViewModel.AddOrReplace(VaultSecretViewModel.FromSecretProperties(this, sp));
-                        CurrentVaultAlias.SecretsCollectionEnabled = true;
+                            tab.VaultList.AddOrReplace(VaultSecretViewModel.FromSecretProperties(this, sp));
+                        alias.SecretsCollectionEnabled = true;
                     });
                 }, cts.Token);
 
                 var certsTask = Task.Run(async () =>
                 {
-                    var certs = await CurrentVault.ListCertificatesAsync(0, p =>
+                    var certs = await tab.Vault.ListCertificatesAsync(0, p =>
                     {
                         c = p;
                         Avalonia.Threading.Dispatcher.UIThread.Post(
@@ -405,15 +461,15 @@ namespace Microsoft.Vault.Explorer.ViewModels
                     Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                     {
                         foreach (var cp in certs)
-                            VaultListViewModel.AddOrReplace(VaultCertificateViewModel.FromCertificateProperties(this, cp));
-                        CurrentVaultAlias.CertificatesCollectionEnabled = true;
+                            tab.VaultList.AddOrReplace(VaultCertificateViewModel.FromCertificateProperties(this, cp));
+                        alias.CertificatesCollectionEnabled = true;
                     });
                 }, cts.Token);
 
                 await Task.WhenAll(secretsTask, certsTask);
 
-                if (!string.IsNullOrWhiteSpace(CurrentVault.AuthenticatedUserName))
-                    Title = $"{Globals.AppName} ({CurrentVault.AuthenticatedUserName})";
+                if (!string.IsNullOrWhiteSpace(tab.Vault.AuthenticatedUserName))
+                    Title = $"{Globals.AppName} ({tab.Vault.AuthenticatedUserName})";
 
                 UpdateItemCountText();
             }

@@ -2,27 +2,26 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Microsoft.Vault.Explorer.Views.Dialogs.MessageDialogView"
         Title="Message"
-        Width="480" Height="220"
-        MinWidth="360" MinHeight="150"
-        MaxHeight="480"
-        SizeToContent="Height"
-        WindowStartupLocation="CenterOwner"
-        CanResize="True">
+        Width="500" Height="300"
+        MinWidth="360" MinHeight="160"
+        MaxHeight="560"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
 
   <DockPanel Margin="16">
 
-    <!-- Buttons (anchored bottom) -->
+    <!-- Buttons — always pinned at bottom, never scrolled over -->
     <StackPanel DockPanel.Dock="Bottom"
                 Orientation="Horizontal"
                 HorizontalAlignment="Right"
                 Spacing="8"
-                Margin="0,16,0,0">
-      <Button x:Name="YesButton"  Content="Yes"    IsVisible="False" Width="80" Click="YesButton_Click"/>
-      <Button x:Name="NoButton"   Content="No"     IsVisible="False" Width="80" Click="NoButton_Click"/>
-      <Button x:Name="OkButton"   Content="OK"     IsDefault="True"  Width="80" Click="OkButton_Click"/>
+                Margin="0,12,0,0">
+      <Button x:Name="YesButton" Content="Yes"    IsVisible="False" Width="80" Click="YesButton_Click"/>
+      <Button x:Name="NoButton"  Content="No"     IsVisible="False" Width="80" Click="NoButton_Click"/>
+      <Button x:Name="OkButton"  Content="OK"     IsDefault="True"  Width="80" Click="OkButton_Click"/>
     </StackPanel>
 
-    <!-- Icon + scrollable message -->
+    <!-- Icon + scrollable message body -->
     <Grid ColumnDefinitions="Auto,*">
       <TextBlock Grid.Column="0"
                  x:Name="IconText"
@@ -34,7 +33,8 @@
                     HorizontalScrollBarVisibility="Disabled">
         <TextBlock x:Name="MessageText"
                    TextWrapping="Wrap"
-                   VerticalAlignment="Top"/>
+                   VerticalAlignment="Top"
+                   LineHeight="20"/>
       </ScrollViewer>
     </Grid>
 

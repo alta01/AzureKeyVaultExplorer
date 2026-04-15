@@ -74,10 +74,23 @@
 
       <GridSplitter Grid.Row="1" ResizeDirection="Rows" Background="Transparent"/>
 
-      <!-- Bottom: vault property grid -->
-      <pgc:PropertyGrid Grid.Row="2"
-                        DataContext="{Binding VaultDetails}"
-                        ShowTitle="False"/>
+      <!-- Bottom: access check bar + vault property grid -->
+      <DockPanel Grid.Row="2">
+        <!-- Access check status -->
+        <StackPanel DockPanel.Dock="Top" Margin="0,2,0,4">
+          <ProgressBar IsIndeterminate="True"
+                       IsVisible="{Binding IsCheckingAccess}"
+                       Height="3"
+                       Margin="0,0,0,2"/>
+          <TextBlock Text="{Binding AccessCheckResult}"
+                     IsVisible="{Binding AccessCheckFailed}"
+                     Foreground="OrangeRed"
+                     FontSize="11"
+                     FontWeight="SemiBold"/>
+        </StackPanel>
+        <pgc:PropertyGrid DataContext="{Binding VaultDetails}"
+                          ShowTitle="False"/>
+      </DockPanel>
 
     </Grid>
 
