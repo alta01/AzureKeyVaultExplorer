@@ -29,6 +29,9 @@ public partial class App : Application
         ConfigureServices(services);
         Services = services.BuildServiceProvider();
 
+        // Apply saved theme before the window opens
+        RequestedThemeVariant = AppSettings.Default.ThemeVariant;
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow

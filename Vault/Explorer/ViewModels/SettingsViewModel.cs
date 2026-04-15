@@ -6,8 +6,11 @@ namespace Microsoft.Vault.Explorer.ViewModels
     using System;
     using System.Diagnostics;
     using System.IO;
+    using System.Linq;
     using System.Reactive;
     using System.Text;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Vault.Library;
     using ReactiveUI;
 
@@ -22,6 +25,9 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         public string VersionsInfo { get; } = BuildVersionsInfo();
         public string LicenseText { get; } = ReadLicenseText();
+
+        /// <summary>Static so it can be referenced from AXAML x:Static.</summary>
+        public static string SettingsFilePathDisplay => AppSettings.SettingsFilePath;
 
         // ── Commands ───────────────────────────────────────────────────────────
 
@@ -44,7 +50,13 @@ namespace Microsoft.Vault.Explorer.ViewModels
         public SettingsViewModel()
         {
             // Mark dirty whenever any property on the editable copy changes
-            EditCopy.PropertyChanged += (_, _) => IsDirty = true;
+            EditCopy.PropertyChanged += (_, _) =>
+            {
+                IsDirty = true;
+                // Apply theme immediately so the user sees the effect without restarting
+                if (Avalonia.Application.Current != null)
+                    Avalonia.Application.Current.RequestedThemeVariant = EditCopy.ThemeVariant;
+            };
 
             var canSave = this.WhenAnyValue(x => x.IsDirty);
 
@@ -62,8 +74,16 @@ namespace Microsoft.Vault.Explorer.ViewModels
             OpenSettingsFolderCommand = ReactiveCommand.Create(
                 () => OpenFolder(Path.GetDirectoryName(AppSettings.SettingsFilePath)!));
 
-            ClearTokenCacheCommand = ReactiveCommand.Create(
-                () => FileTokenCache.ClearAllFileTokenCaches());
+            ClearTokenCacheCommand = ReactiveCommand.CreateFromTask(ClearTokenCacheAsync);
+        }
+
+        private async Task ClearTokenCacheAsync()
+        {
+            FileTokenCache.ClearAllFileTokenCaches();
+            var dialogs = App.Services.GetRequiredService<Services.IDialogService>();
+            await dialogs.ShowMessageAsync(
+                "Token Cache Cleared",
+                "All cached authentication tokens have been removed.\n\nYou will be prompted to sign in again when you next connect to a vault.");
         }
 
         private void Save()
@@ -83,6 +103,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
             var src = AppSettings.Default;
             return new AppSettings
             {
+                Theme = src.Theme,
                 CopyToClipboardTimeToLive = src.CopyToClipboardTimeToLive,
                 AboutToExpireWarningPeriod = src.AboutToExpireWarningPeriod,
                 AboutToExpireItemColor = src.AboutToExpireItemColor,

@@ -78,6 +78,11 @@
     </AvaloniaXaml>
   </ItemGroup>
 
+  <!-- ── Icon assets ─────────────────────────────────────────────────────── -->
+  <ItemGroup>
+    <AvaloniaResource Include="Resources\**" />
+  </ItemGroup>
+
   <!-- ── Static content ───────────────────────────────────────────────────── -->
   <ItemGroup>
     <Compile Update="Controls\MenuItems\CustomVersion.cs">

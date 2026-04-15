@@ -16,6 +16,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
     using System.Threading.Tasks;
     using Avalonia.Controls.ApplicationLifetimes;
     using Avalonia.Platform.Storage;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Vault.Explorer.Common;
     using Microsoft.Vault.Explorer.Model;
     using Microsoft.Vault.Explorer.Model.ContentTypes;
@@ -198,7 +199,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
             CopyNameCommand = ReactiveCommand.CreateFromTask(CopyNameAsync, hasSingleItem);
             ToggleFavoriteCommand = ReactiveCommand.Create(ToggleFavorite, hasAnySelection);
             SettingsCommand = ReactiveCommand.CreateFromTask(OpenSettingsAsync);
-            HelpCommand = ReactiveCommand.Create(OpenHelp);
+            HelpCommand = ReactiveCommand.CreateFromTask(ShowHelpAsync);
             CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.IsBusy));
             ExitCommand = ReactiveCommand.Create(() =>
             {
@@ -286,7 +287,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
             {
                 if (s == AddNewVaultText)
                 {
-                    OpenHelp();
+                    await ShowAddVaultHelpAsync();
                     _selectedVaultAlias = CurrentVaultAlias;
                     this.RaisePropertyChanged(nameof(SelectedVaultAlias));
                     return;
@@ -667,9 +668,50 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 await dlg.ShowDialog(owner);
         }
 
-        private void OpenHelp()
+        private async Task ShowAddVaultHelpAsync()
         {
-            Process.Start(new ProcessStartInfo { FileName = Globals.GitHubIssuesUrl, UseShellExecute = true });
+            var dialogs = App.Services.GetRequiredService<Services.IDialogService>();
+            await dialogs.ShowMessageAsync(
+                "How to Add a Vault",
+                "There are two ways to add a vault to the dropdown:\n\n" +
+                "1. Pick from Subscription (recommended)\n" +
+                "   Select 'Pick vault from subscription...' in this dropdown,\n" +
+                "   sign in with your Azure account, and choose a subscription\n" +
+                "   and vault. It will be saved automatically.\n\n" +
+                "2. Edit VaultAliases.json manually\n" +
+                "   Open Settings → About → Settings Folder to find your\n" +
+                "   config folder. Edit VaultAliases.json to add vault entries.\n" +
+                "   Each entry needs a Name, TenantId, SubscriptionId, and\n" +
+                "   ResourceGroupName.");
+        }
+
+        private async Task ShowHelpAsync()
+        {
+            var dialogs = App.Services.GetRequiredService<Services.IDialogService>();
+            await dialogs.ShowMessageAsync(
+                "Azure Key Vault Explorer — Help",
+                "KEYBOARD SHORTCUTS\n" +
+                "  F5       Refresh the current vault\n" +
+                "  Enter    Edit selected item\n" +
+                "  Delete   Delete selected item(s)\n" +
+                "  Ctrl+F   Focus the search box\n\n" +
+                "GETTING STARTED\n" +
+                "  1. Select a vault from the dropdown (top-left)\n" +
+                "  2. Choose 'Pick vault from subscription...' to browse your\n" +
+                "     Azure subscriptions and add a vault\n" +
+                "  3. Once a vault is loaded, use the toolbar or Edit menu\n" +
+                "     to manage secrets and certificates\n\n" +
+                "SEARCHING\n" +
+                "  The search box supports regular expressions.\n" +
+                "  Example: ^prod- matches all items starting with 'prod-'\n\n" +
+                "COPY FORMATS\n" +
+                "  Copy as ENV  →  SECRETNAME=value\n" +
+                "  Copy as Docker  →  --env SECRETNAME=value\n" +
+                "  Copy as K8s  →  Kubernetes secret YAML block\n\n" +
+                $"SOURCE CODE & ISSUES\n" +
+                $"  {Globals.GitHubUrl}\n\n" +
+                "VERSION\n" +
+                $"  .NET {Environment.Version}  |  {(Environment.Is64BitProcess ? "x64" : "x86")}  |  {Environment.OSVersion}");
         }
 
         // ── Cancel ─────────────────────────────────────────────────────────────

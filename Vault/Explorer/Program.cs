@@ -13,10 +13,23 @@ namespace Microsoft.Vault.Explorer;
 
 internal static class Program
 {
+    // Log file that survives app exit — readable by Claude after a crash.
+    internal static readonly string CrashLogPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "AzureKeyVaultExplorer", "crash.log");
+
     // Avalonia requires [STAThread] on desktop.
     [STAThread]
     public static void Main(string[] args)
     {
+        // Ensure crash log directory exists and clear previous log.
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(CrashLogPath)!);
+            File.WriteAllText(CrashLogPath, $"=== Session started {DateTime.Now:u} ===\n");
+        }
+        catch { }
+
         // Ensure config directory exists and populate default files on first run.
         SetupConfigurationFiles();
 
@@ -34,11 +47,15 @@ internal static class Program
         // Clear all cached auth tokens on clean exit.
         AppDomain.CurrentDomain.ProcessExit += (_, _) => FileTokenCache.ClearAllFileTokenCaches();
 
-        // Unhandled exception fallback — log and exit gracefully.
+        // Unhandled exception fallback — write to crash log and stderr.
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             if (e.ExceptionObject is Exception ex)
-                Console.Error.WriteLine($"Unhandled exception: {ex}");
+            {
+                string msg = $"[{DateTime.Now:u}] Unhandled exception:\n{ex}\n";
+                Console.Error.WriteLine(msg);
+                try { File.AppendAllText(CrashLogPath, msg); } catch { }
+            }
         };
 
         // Assembly redirect: old Microsoft.PS.Common.Vault → new Microsoft.Vault.Library

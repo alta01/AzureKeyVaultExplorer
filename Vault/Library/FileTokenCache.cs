@@ -18,8 +18,7 @@ namespace Microsoft.Vault.Library
 
         public FileTokenCache(string domainHint)
         {
-            this.FileName = Environment.ExpandEnvironmentVariables(
-                string.Format(Consts.VaultTokenCacheFileName, domainHint));
+            this.FileName = string.Format(Consts.VaultTokenCacheFileName, domainHint);
             Directory.CreateDirectory(Path.GetDirectoryName(this.FileName));
 
             // Restrict file permissions on non-Windows (chmod 600).
@@ -32,12 +31,14 @@ namespace Microsoft.Vault.Library
 
         public static string[] GetAllFileTokenCacheLoginNames()
         {
-            string[] paths = Directory.GetFiles(
-                Environment.ExpandEnvironmentVariables(Consts.VaultTokenCacheDirectory));
+            string dir = Consts.VaultTokenCacheDirectory;
+            if (!Directory.Exists(dir))
+                return Array.Empty<string>();
+
+            string[] paths = Directory.GetFiles(dir);
 
             for (int i = 0; i < paths.Length; i++)
             {
-                // Use Path.GetFileName instead of Windows-only split on '\\'
                 var filename = Path.GetFileName(paths[i]);
                 paths[i] = filename.Split('_').Length > 1 ? filename.Split('_')[1] : filename;
             }
@@ -53,8 +54,7 @@ namespace Microsoft.Vault.Library
 
         public void Rename(string newName)
         {
-            newName = Environment.ExpandEnvironmentVariables(
-                string.Format(Consts.VaultTokenCacheFileName, newName));
+            newName = string.Format(Consts.VaultTokenCacheFileName, newName);
             if (File.Exists(newName)) File.Delete(newName);
             File.Move(this.FileName, newName);
             this.FileName = newName;

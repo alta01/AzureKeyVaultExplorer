@@ -5,8 +5,8 @@
         x:Class="Microsoft.Vault.Explorer.Views.Dialogs.SettingsView"
         x:DataType="vm:SettingsViewModel"
         Title="Settings"
-        Width="760" Height="600"
-        MinWidth="600" MinHeight="400"
+        Width="820" Height="640"
+        MinWidth="640" MinHeight="480"
         WindowStartupLocation="CenterOwner">
 
   <DockPanel Margin="12">
@@ -17,13 +17,13 @@
                 HorizontalAlignment="Right"
                 Spacing="8"
                 Margin="0,8,0,0">
-      <Button Content="OK"
+      <Button Content="Save"
               IsDefault="True"
-              Width="80"
+              Width="90"
               Command="{Binding SaveCommand}"
               Click="OkButton_Click"/>
-      <Button Content="Cancel"
-              Width="80"
+      <Button Content="Close"
+              Width="90"
               IsCancel="True"
               Click="CancelButton_Click"/>
     </StackPanel>
@@ -33,9 +33,34 @@
 
       <!-- Settings tab -->
       <TabItem Header="Settings">
-        <pgc:PropertyGrid DataContext="{Binding EditCopy}"
-                          ShowTitle="False"
-                          Margin="4"/>
+        <DockPanel Margin="0,4,0,0">
+          <!-- Settings.json location hint -->
+          <Border DockPanel.Dock="Top"
+                  Background="#1A0078D4"
+                  BorderBrush="#330078D4"
+                  BorderThickness="1"
+                  CornerRadius="4"
+                  Padding="8,6"
+                  Margin="0,0,0,8">
+            <TextBlock TextWrapping="Wrap" FontSize="11" Opacity="0.85">
+              <Run FontWeight="SemiBold">settings.json</Run>
+              <Run> — Stored at: </Run>
+              <Run FontStyle="Italic" FontFamily="Cascadia Mono,Consolas,monospace" FontSize="10"
+                   Text="{x:Static vm:SettingsViewModel.SettingsFilePathDisplay}"/>
+              <Run>. This file persists all your preferences across app restarts. You can edit it directly or use this dialog. Use </Run>
+              <Run FontWeight="SemiBold">About → Settings Folder</Run>
+              <Run> to open it in your file manager. Hover any row below for a description of what it does.</Run>
+            </TextBlock>
+          </Border>
+
+          <!-- Scrollable property grid -->
+          <ScrollViewer VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
+            <pgc:PropertyGrid DataContext="{Binding EditCopy}"
+                              ShowTitle="False"
+                              Margin="0"/>
+          </ScrollViewer>
+        </DockPanel>
       </TabItem>
 
       <!-- About tab -->
@@ -44,11 +69,16 @@
 
           <!-- Links row -->
           <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-            <Button Content="GitHub" Command="{Binding OpenGitHubCommand}"/>
-            <Button Content="Send Feedback" Command="{Binding OpenFeedbackCommand}"/>
-            <Button Content="Install Folder" Command="{Binding OpenInstallFolderCommand}"/>
-            <Button Content="Settings Folder" Command="{Binding OpenSettingsFolderCommand}"/>
-            <Button Content="Clear Token Cache" Command="{Binding ClearTokenCacheCommand}"/>
+            <Button Content="GitHub" Command="{Binding OpenGitHubCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Open the project on GitHub (alta01/AzureKeyVaultExplorer)"/>
+            <Button Content="Send Feedback" Command="{Binding OpenFeedbackCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Report a bug or suggest a feature on GitHub Issues"/>
+            <Button Content="Install Folder" Command="{Binding OpenInstallFolderCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Open the folder where the application binaries are installed"/>
+            <Button Content="Settings Folder" Command="{Binding OpenSettingsFolderCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Open the folder containing settings.json and vault configuration files"/>
+            <Button Content="Clear Token Cache" Command="{Binding ClearTokenCacheCommand}" Margin="0,0,6,4"
+                    ToolTip.Tip="Delete all cached Azure authentication tokens. You will be prompted to sign in again."/>
           </WrapPanel>
 
           <!-- Versions -->
@@ -61,8 +91,9 @@
                    IsReadOnly="True"
                    FontFamily="Cascadia Mono,Consolas,monospace"
                    FontSize="11"
-                   Height="80"
+                   Height="90"
                    AcceptsReturn="True"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
                    Margin="0,0,0,12"/>
 
           <!-- License -->
