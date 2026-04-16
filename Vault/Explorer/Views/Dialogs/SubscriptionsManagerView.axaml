@@ -97,26 +97,26 @@
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                   HorizontalAlignment="Stretch">
-              <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"              FontWeight="SemiBold" Margin="0,2"/>
-              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}"    Margin="0,2" TextWrapping="Wrap"/>
+              <TextBlock           Grid.Row="0" Grid.Column="0" Text="Name"              FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}"     Margin="0,2" TextWrapping="Wrap"/>
 
-              <TextBlock Grid.Row="1" Grid.Column="0" Text="URI"               FontWeight="SemiBold" Margin="0,2"/>
-              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Uri}"     Margin="0,2" TextWrapping="Wrap"/>
+              <TextBlock           Grid.Row="1" Grid.Column="0" Text="URI"               FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Uri}"     Margin="0,2" TextWrapping="Wrap"/>
 
-              <TextBlock Grid.Row="2" Grid.Column="0" Text="Location"          FontWeight="SemiBold" Margin="0,2"/>
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Location}" Margin="0,2"/>
+              <TextBlock           Grid.Row="2" Grid.Column="0" Text="Location"          FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Location}" Margin="0,2"/>
 
-              <TextBlock Grid.Row="3" Grid.Column="0" Text="Subscription"      FontWeight="SemiBold" Margin="0,2"/>
-              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SubscriptionName}" Margin="0,2"/>
+              <TextBlock           Grid.Row="3" Grid.Column="0" Text="Subscription"      FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SubscriptionName}" Margin="0,2"/>
 
-              <TextBlock Grid.Row="4" Grid.Column="0" Text="Resource group"    FontWeight="SemiBold" Margin="0,2"/>
-              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ResourceGroupName}" Margin="0,2"/>
+              <TextBlock           Grid.Row="4" Grid.Column="0" Text="Resource group"    FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ResourceGroupName}" Margin="0,2"/>
 
-              <TextBlock Grid.Row="5" Grid.Column="0" Text="SKU"               FontWeight="SemiBold" Margin="0,2"/>
-              <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Sku}"     Margin="0,2"/>
+              <TextBlock           Grid.Row="5" Grid.Column="0" Text="SKU"               FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Sku}"     Margin="0,2"/>
 
-              <TextBlock Grid.Row="6" Grid.Column="0" Text="Subscription id"   FontWeight="SemiBold" Margin="0,2" Opacity="0.7"/>
-              <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SubscriptionId}" Margin="0,2" Opacity="0.7" FontFamily="Monospace" FontSize="11"/>
+              <TextBlock           Grid.Row="6" Grid.Column="0" Text="Subscription id"   FontWeight="SemiBold" Margin="0,2" Opacity="0.7"/>
+              <SelectableTextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SubscriptionId}" Margin="0,2" Opacity="0.7" FontFamily="Monospace" FontSize="11"/>
             </Grid>
           </ScrollViewer>
         </Border>

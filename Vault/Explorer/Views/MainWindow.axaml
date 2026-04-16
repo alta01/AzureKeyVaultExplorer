@@ -292,10 +292,11 @@
             <!-- Main split: item list (left) | property panel (right) -->
             <Grid ColumnDefinitions="*,4,300">
 
-              <!-- Item DataGrid -->
+              <!-- Item DataGrid — SelectedItem bound up to MainWindowViewModel
+                   so toolbar command canExecute predicates re-enable on row click -->
               <DataGrid Grid.Column="0"
                         ItemsSource="{Binding VaultList.Items}"
-                        SelectedItem="{Binding SelectedItem}"
+                        SelectedItem="{Binding $parent[TabControl].DataContext.SelectedItem, Mode=TwoWay}"
                         IsReadOnly="True"
                         SelectionMode="Extended"
                         CanUserResizeColumns="True"
@@ -326,20 +327,23 @@
 
               <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Transparent"/>
 
-              <!-- Property panel -->
-              <Panel Grid.Column="2">
+              <!-- Property panel — Grid (not Panel) so HorizontalAlignment="Center" works -->
+              <Grid Grid.Column="2">
                 <TextBlock Text="Select an item to view its properties"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
                            FontSize="12"
                            Opacity="0.4"
                            FontStyle="Italic"
-                           IsVisible="{Binding SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"/>
-                <pgc:PropertyGrid DataContext="{Binding SelectedItem}"
+                           Margin="12"
+                           IsVisible="{Binding $parent[TabControl].DataContext.SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"/>
+                <pgc:PropertyGrid DataContext="{Binding $parent[TabControl].DataContext.SelectedItem}"
                                   ShowTitle="False"
                                   AllowFilter="False"
-                                  IsVisible="{Binding SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-              </Panel>
+                                  IsVisible="{Binding $parent[TabControl].DataContext.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+              </Grid>
             </Grid>
           </DataTemplate>
         </TabControl.ContentTemplate>
