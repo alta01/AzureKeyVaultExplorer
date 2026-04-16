@@ -22,6 +22,7 @@ runs on Windows, macOS, and Linux.
 | Auth | Microsoft.Identity.Client (MSAL v4) — browser-based OAuth |
 | Azure (data plane) | Azure.Security.KeyVault.Secrets 4.7, Azure.Security.KeyVault.Certificates 4.7 |
 | Azure (management) | Azure.ResourceManager 1.14, Azure.ResourceManager.KeyVault 1.3 |
+| Azure (credential) | Azure.Identity 1.13.1 (AzureCliCredential + ManagedIdentityCredential chain in `VaultAccessTokenCredential`) |
 | Settings | JSON in `SpecialFolder.ApplicationData/VaultExplorerNext/` |
 | Secrets encryption | Microsoft.AspNetCore.DataProtection (cross-platform DPAPI replacement) |
 | Target framework | `net10.0` |
@@ -150,6 +151,87 @@ Default theme: **Arctic Frost** (light). Changed in `AppSettings.cs`:
 ```csharp
 public string Theme { get; set; } = "Arctic Frost";
 ```
+
+## Toolbar layout (MainWindow.axaml)
+
+Toolbar buttons are grouped into **6 rounded boxes** (`Border` with `Background="#14808080"`,
+`CornerRadius="4"`, `Padding="1"`) for visual containment. Groups and their buttons:
+
+1. **Refresh** — Refresh
+2. **Create** — + Secret, + Cert
+3. **Item Actions** — Edit, Enable/Disable, Delete
+4. **Share** — Copy, Link, Save
+5. **Copy As** — ENV, Docker, K8s, Name
+6. **Settings** — Settings, Help
+
+Favorite is standalone (with a thin separator), between Copy-As and Settings.
+
+The toolbar is wrapped in a `ScrollViewer` with `AllowAutoHide="True"` so the horizontal
+scrollbar only appears on hover. Global scrollbar styling in `App.axaml` forces horizontal
+scrollbars to `Height=6`.
+
+## Vault auth flow
+
+`VaultAccessTokenCredential` (Library) bridges MSAL-based `VaultAccess` to `TokenCredential`.
+The `GetTokenAsync` path:
+
+1. **First attempt:** `ChainedTokenCredential(AzureCliCredential, ManagedIdentityCredential)`
+   — uses `az login` tokens on dev machines; uses managed identity when running in Azure.
+2. **On `OperationCanceledException`:** re-thrown immediately so Cancel button works.
+3. **On `CredentialUnavailableException` or other errors:** falls through to the MSAL
+   `VaultAccess` chain (certificate / client-credential / user-interactive).
+
+When opening a vault picked from the subscription browser, `MainWindowViewModel.OpenVaultTabAsync`
+constructs the `VaultsConfig` in memory — no `Vaults.json` file is read — so the app works
+without any local config file.
+
+## Vault Unreachable dialog
+
+When `OpenVaultTabAsync` catches a non-cancellation exception:
+1. Removes the speculatively added tab
+2. Sets `VaultConnectionError` (binds to an orange ⚠ button next to the vault dropdown)
+3. Shows `VaultUnreachableDialogView` via `ShowVaultUnreachableInteraction`
+
+The dialog offers **Retry** (loops with incrementing attempt counter), **Back to vault picker**
+(reopens the Subscriptions Manager), and **Cancel** (closes the dialog).
+
+## Help dialog
+
+`ShowHelpInteraction` opens `HelpDialogView` — a dedicated Window (not a `MessageDialog`)
+with structured sections (Keyboard shortcuts, Getting started, Searching, Copy formats,
+Source code/Issues). Links are clickable via `Process.Start(new ProcessStartInfo { FileName=url, UseShellExecute=true })`
+with `xdg-open` fallback for Linux.
+
+## Keyboard shortcuts (MainWindow.axaml.cs → OnKeyDown)
+
+Both `KeyModifiers.Control` (Win/Linux) and `KeyModifiers.Meta` (macOS ⌘) are accepted for
+the "command" modifier. Currently wired:
+
+- `F5` → Refresh
+- `Delete` → Delete
+- `Enter` → Edit (only when focus is not inside a `TextBox`)
+- `Ctrl/⌘+F` → Focus search box
+- `Ctrl/⌘+C` → Copy value (only when focus is not inside a `TextBox`)
+
+## Themes (Vault/Explorer/Themes/)
+
+Four `ResourceDictionary` files override `SystemAccentColor` + `SystemRegionBrush` +
+`SystemControlBackgroundBaseLowBrush` for strong visual distinction (not just accent tint).
+
+| Theme | Variant | Accent | Base | Vibe |
+|-------|---------|--------|------|------|
+| Arctic Frost (default) | Light | Steel blue `#4a6fa5` | white | Crisp cool |
+| Modern Minimalist | Light | Slate gray `#708090` | white | Neutral |
+| Ocean Depths | Dark | Cyan-teal `#00b8d4` | deep navy `#0e1d28` | Maritime |
+| Midnight Galaxy | Dark | Violet `#9c6dff` | warm purple-black `#1a1425` | Cosmic |
+
+WCAG-AA contrast is targeted on all accent/base pairs.
+
+## Linux packaging
+
+`Vault/Explorer/packaging/linux/vault-explorer.desktop` — install to
+`~/.local/share/applications/` so GNOME/KDE shells show the correct taskbar icon
+(`Window.Icon` alone isn't enough). See `packaging/linux/README.md` for install steps.
 
 ## Security notes
 

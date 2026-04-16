@@ -7,9 +7,15 @@
     <Application.Styles>
         <FluentTheme />
         <materialIcons:MaterialIconStyles />
-        <!-- Keep horizontal scrollbars slim so they don't overlap toolbar button text -->
+        <!-- Keep horizontal scrollbars slim so they don't overlap toolbar button text.
+             Fluent theme sets MinHeight internally; override explicitly. -->
         <Style Selector="ScrollBar:horizontal">
             <Setter Property="Height" Value="6"/>
+            <Setter Property="MinHeight" Value="6"/>
+            <Setter Property="MaxHeight" Value="6"/>
+        </Style>
+        <Style Selector="ScrollBar:horizontal /template/ Thumb">
+            <Setter Property="MinHeight" Value="4"/>
         </Style>
     </Application.Styles>
 

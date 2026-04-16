@@ -192,6 +192,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
         // ── Interactions (wired in MainWindow.axaml.cs) ───────────────────────
         public Interaction<Unit, VaultAlias?> PickVaultInteraction { get; } = new();
         public Interaction<VaultUnreachableDialogViewModel, VaultUnreachableAction> ShowVaultUnreachableInteraction { get; } = new();
+        public Interaction<Unit, Unit> ShowHelpInteraction { get; } = new();
         public Interaction<FilePickerOpenOptions, string?> OpenFileInteraction { get; } = new();
         public Interaction<FilePickerSaveOptions, string?> SaveFileInteraction { get; } = new();
         /// <summary>Input = null for new secret, VaultItemViewModel for edit.</summary>
@@ -388,10 +389,19 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 this.RaisePropertyChanged(nameof(SelectedVaultAlias));
                 await RefreshAsync();
             }
-            catch
+            catch (OperationCanceledException)
             {
                 _selectedVaultAlias = CurrentVaultAlias;
                 this.RaisePropertyChanged(nameof(SelectedVaultAlias));
+            }
+            catch (Exception ex)
+            {
+                VaultConnectionError = ex.Message;
+                _selectedVaultAlias = CurrentVaultAlias;
+                this.RaisePropertyChanged(nameof(SelectedVaultAlias));
+                // Surface the error via a dialog so the user knows what happened
+                var dialogs = App.Services.GetRequiredService<Services.IDialogService>();
+                await dialogs.ShowErrorAsync("Failed to open vault", ex.Message, ex);
             }
         }
 
@@ -419,30 +429,47 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 string.Equals(t.VaultAlias.Alias, alias.Alias, StringComparison.OrdinalIgnoreCase));
             bool existingTabReused = existingTab != null;
 
-            VaultTabViewModel tab;
-            if (existingTabReused)
+            VaultTabViewModel tab = null!;
+            bool tabAdded = false;
+            try
             {
-                tab = existingTab!;
-                tab.VaultList.Clear();
-                SelectedItem = null;
-            }
-            else
-            {
-                StatusText = "Connecting to vault...";
-                var vault = new Library.Vault(
-                    Common.Utils.FullPathToJsonFile(AppSettings.Default.VaultsJsonFileLocation),
-                    VaultAccessTypeEnum.ReadWrite,
-                    alias.VaultNames);
-
-                if (!string.IsNullOrWhiteSpace(alias.UserAlias) || vault.VaultsConfig.Count == 0)
+                if (existingTabReused)
                 {
-                    vault.VaultsConfig[alias.VaultNames[0]] = new VaultAccessType(
+                    tab = existingTab!;
+                    tab.VaultList.Clear();
+                    SelectedItem = null;
+                }
+                else
+                {
+                    StatusText = "Connecting to vault...";
+
+                    // Build VaultsConfig in memory — no Vaults.json file required for subscription-picked vaults.
+                    var accessTypes = new VaultAccessType(
                         new VaultAccess[] { new VaultAccessUserInteractive(alias.DomainHint, alias.UserAlias) },
                         new VaultAccess[] { new VaultAccessUserInteractive(alias.DomainHint, alias.UserAlias) });
-                }
+                    var configDict = new System.Collections.Generic.Dictionary<string, VaultAccessType>();
+                    foreach (var vaultName in alias.VaultNames)
+                        configDict[vaultName] = accessTypes;
+                    var vaultsConfig = new VaultsConfig(configDict);
 
-                tab = new VaultTabViewModel(alias, vault);
-                Tabs.Add(tab);
+                    var vault = new Library.Vault(vaultsConfig, VaultAccessTypeEnum.ReadWrite, alias.VaultNames);
+
+                    tab = new VaultTabViewModel(alias, vault);
+                    Tabs.Add(tab);
+                    tabAdded = true;
+                }
+            }
+            catch (Exception ctorEx)
+            {
+                IsBusy = false;
+                StatusText = "";
+                _cts = null;
+                VaultConnectionError = ctorEx.Message;
+                if (!suppressErrorDialog)
+                    await ShowVaultUnreachableDialogAsync(alias, ctorEx);
+                else
+                    throw;
+                return;
             }
 
             SelectedTab = tab;
@@ -490,7 +517,9 @@ namespace Microsoft.Vault.Explorer.ViewModels
                     });
                 }, cts.Token);
 
-                await Task.WhenAll(secretsTask, certsTask);
+                // WaitAsync forces immediate OperationCanceledException on the awaiter when
+                // cts is cancelled, even if the inner tasks don't promptly honor the token.
+                await Task.WhenAll(secretsTask, certsTask).WaitAsync(cts.Token);
 
                 if (!string.IsNullOrWhiteSpace(tab.Vault.AuthenticatedUserName))
                     Title = $"{Globals.AppName} ({tab.Vault.AuthenticatedUserName})";
@@ -501,7 +530,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
             catch (Exception ex)
             {
                 // Remove the speculatively added tab on failure
-                if (!existingTabReused)
+                if (tabAdded && tab != null)
                 {
                     Tabs.Remove(tab);
                     tab.Dispose();
@@ -811,34 +840,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 "   ResourceGroupName.");
         }
 
-        private async Task ShowHelpAsync()
-        {
-            var dialogs = App.Services.GetRequiredService<Services.IDialogService>();
-            await dialogs.ShowMessageAsync(
-                "Azure Key Vault Explorer — Help",
-                "KEYBOARD SHORTCUTS\n" +
-                "  F5       Refresh the current vault\n" +
-                "  Enter    Edit selected item\n" +
-                "  Delete   Delete selected item(s)\n" +
-                "  Ctrl+F   Focus the search box\n\n" +
-                "GETTING STARTED\n" +
-                "  1. Select a vault from the dropdown (top-left)\n" +
-                "  2. Choose 'Pick vault from subscription...' to browse your\n" +
-                "     Azure subscriptions and add a vault\n" +
-                "  3. Once a vault is loaded, use the toolbar or Edit menu\n" +
-                "     to manage secrets and certificates\n\n" +
-                "SEARCHING\n" +
-                "  The search box supports regular expressions.\n" +
-                "  Example: ^prod- matches all items starting with 'prod-'\n\n" +
-                "COPY FORMATS\n" +
-                "  Copy as ENV  →  SECRETNAME=value\n" +
-                "  Copy as Docker  →  --env SECRETNAME=value\n" +
-                "  Copy as K8s  →  Kubernetes secret YAML block\n\n" +
-                $"SOURCE CODE & ISSUES\n" +
-                $"  {Globals.GitHubUrl}\n\n" +
-                "VERSION\n" +
-                $"  .NET {Environment.Version}  |  {(Environment.Is64BitProcess ? "x64" : "x86")}  |  {Environment.OSVersion}");
-        }
+        private async Task ShowHelpAsync() => await ShowHelpInteraction.Handle(Unit.Default);
 
         // ── Cancel ─────────────────────────────────────────────────────────────
 

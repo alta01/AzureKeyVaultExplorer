@@ -136,6 +136,16 @@ namespace Microsoft.Vault.Explorer.Views
                     })
                     .DisposeWith(d);
 
+                // ── Help dialog ───────────────────────────────────────────────
+                ViewModel.ShowHelpInteraction
+                    .RegisterHandler(async ctx =>
+                    {
+                        var dlg = new HelpDialogView();
+                        await dlg.ShowDialog(this);
+                        ctx.SetOutput(Unit.Default);
+                    })
+                    .DisposeWith(d);
+
                 // DataGrid multi-selection and drag-drop are wired via AXAML event handlers
                 // (SelectionChanged="OnDataGridSelectionChanged", Drop="OnGridDrop", DragOver="OnGridDragOver")
                 // so no FindControl needed here.
@@ -218,6 +228,9 @@ namespace Microsoft.Vault.Explorer.Views
             base.OnKeyDown(e);
             if (ViewModel == null) return;
 
+            // Accept Ctrl (Windows/Linux) OR Meta (macOS ⌘) as the "command" modifier
+            bool cmd = (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Meta)) != 0;
+
             switch (e.Key)
             {
                 case Key.F5:
@@ -228,9 +241,19 @@ namespace Microsoft.Vault.Explorer.Views
                     ViewModel.DeleteCommand.Execute(Unit.Default).Subscribe();
                     e.Handled = true;
                     break;
-                case Key.F when (e.KeyModifiers & KeyModifiers.Control) != 0:
-                    // Ctrl+F: focus search box
+                case Key.Enter when !(FocusManager?.GetFocusedElement() is TextBox):
+                    // Enter edits the selected item — but don't swallow Enter while typing
+                    ViewModel.EditCommand.Execute(Unit.Default).Subscribe();
+                    e.Handled = true;
+                    break;
+                case Key.F when cmd:
+                    // Ctrl+F / ⌘+F: focus search box
                     this.FindControl<TextBox>("SearchBox")?.Focus();
+                    e.Handled = true;
+                    break;
+                case Key.C when cmd && !(FocusManager?.GetFocusedElement() is TextBox):
+                    // Ctrl+C / ⌘+C: copy secret value when a list item is selected
+                    ViewModel.CopyValueCommand.Execute(Unit.Default).Subscribe();
                     e.Handled = true;
                     break;
             }

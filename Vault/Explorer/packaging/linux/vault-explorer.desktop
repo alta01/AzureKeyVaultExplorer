@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Azure Key Vault Explorer
+GenericName=Key Vault Browser
+Comment=Browse, edit, and manage Azure Key Vault secrets, keys, and certificates
+Keywords=azure;keyvault;secrets;certificates;cloud
+Categories=Development;Utility;
+Exec=VaultExplorer %u
+Icon=vault-explorer
+Terminal=false
+# Match the Avalonia window's WM_CLASS so GNOME/KDE group the taskbar icon correctly
+StartupWMClass=VaultExplorer
+StartupNotify=true
+MimeType=x-scheme-handler/vault;

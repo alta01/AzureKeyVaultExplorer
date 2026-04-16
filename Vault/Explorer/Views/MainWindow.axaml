@@ -77,7 +77,8 @@
 
       <!-- Scrollable toolbar — groups wrapped in subtle rounded boxes -->
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                    Padding="0,0,0,8">
+                    AllowAutoHide="True"
+                    Padding="0,0,0,4">
         <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,1,0,1">
 
           <!-- ── Refresh ─────────────────────────────────────────────── -->
