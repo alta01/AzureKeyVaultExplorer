@@ -290,7 +290,7 @@
         <TabControl.ContentTemplate>
           <DataTemplate DataType="vm:VaultTabViewModel">
             <!-- Main split: item list (left) | property panel (right) -->
-            <Grid ColumnDefinitions="*,4,300">
+            <Grid ColumnDefinitions="*,4,360">
 
               <!-- Item DataGrid — SelectedItem bound up to MainWindowViewModel
                    so toolbar command canExecute predicates re-enable on row click -->
@@ -327,7 +327,7 @@
 
               <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Transparent"/>
 
-              <!-- Property panel — Grid (not Panel) so HorizontalAlignment="Center" works -->
+              <!-- Property panel — scrollable so long values aren't clipped -->
               <Grid Grid.Column="2">
                 <TextBlock Text="Select an item to view its properties"
                            HorizontalAlignment="Center"
@@ -339,10 +339,13 @@
                            FontStyle="Italic"
                            Margin="12"
                            IsVisible="{Binding $parent[TabControl].DataContext.SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"/>
-                <pgc:PropertyGrid DataContext="{Binding $parent[TabControl].DataContext.SelectedItem}"
-                                  ShowTitle="False"
-                                  AllowFilter="False"
-                                  IsVisible="{Binding $parent[TabControl].DataContext.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
+                              IsVisible="{Binding $parent[TabControl].DataContext.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <pgc:PropertyGrid DataContext="{Binding $parent[TabControl].DataContext.SelectedItem}"
+                                    ShowTitle="False"
+                                    AllowFilter="False"/>
+                </ScrollViewer>
               </Grid>
             </Grid>
           </DataTemplate>
