@@ -38,7 +38,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
         // ── Backing for original object (null on New) ──────────────────────────
         public KeyVaultSecret? OriginalSecret { get; private set; }
 
-        // ── PropertyObject (drives PropertyGrid) ──────────────────────────────
+        // ── PropertyObject (drives property form) ──────────────────────────────
         private PropertyObjectSecret _propertyObject;
         public PropertyObjectSecret PropertyObject
         {
@@ -46,9 +46,9 @@ namespace Microsoft.Vault.Explorer.ViewModels
             private set
             {
                 this.RaiseAndSetIfChanged(ref _propertyObject, value);
-                // Re-subscribe to change notifications on the new object
                 _propertyObject.PropertyChanged += OnPropertyObjectChanged;
                 InvalidateCanSave();
+                RefreshFormProperties();
             }
         }
 
@@ -170,6 +170,70 @@ namespace Microsoft.Vault.Explorer.ViewModels
         {
             get => _canSave;
             private set => this.RaiseAndSetIfChanged(ref _canSave, value);
+        }
+
+        // ── Properties for the dialog form panel ──────────────────────────────
+
+        /// <summary>Available content types for the dropdown.</summary>
+        public IReadOnlyList<ContentType> ContentTypes { get; } =
+            Enum.GetValues<ContentType>().Where(ct => ct != ContentType.KeyVaultSecret && ct != ContentType.KeyVaultCertificate).ToArray();
+
+        public ContentType SelectedContentType
+        {
+            get => ((PropertyObjectSecret)PropertyObject).ContentType;
+            set
+            {
+                ((PropertyObjectSecret)PropertyObject).ContentType = value;
+                this.RaisePropertyChanged();
+                _changed = true;
+                InvalidateCanSave();
+            }
+        }
+
+        public bool IsEnabled
+        {
+            get => PropertyObject.Enabled ?? true;
+            set
+            {
+                PropertyObject.Enabled = value;
+                this.RaisePropertyChanged();
+                _changed = true;
+                InvalidateCanSave();
+            }
+        }
+
+        public DateTimeOffset? ValidFrom
+        {
+            get => PropertyObject.NotBefore.HasValue ? new DateTimeOffset(PropertyObject.NotBefore.Value, TimeSpan.Zero) : null;
+            set
+            {
+                PropertyObject.NotBefore = value?.UtcDateTime;
+                this.RaisePropertyChanged();
+                _changed = true;
+                InvalidateCanSave();
+            }
+        }
+
+        public DateTimeOffset? ValidUntil
+        {
+            get => PropertyObject.Expires.HasValue ? new DateTimeOffset(PropertyObject.Expires.Value, TimeSpan.Zero) : null;
+            set
+            {
+                PropertyObject.Expires = value?.UtcDateTime;
+                this.RaisePropertyChanged();
+                _changed = true;
+                InvalidateCanSave();
+            }
+        }
+
+        public string TagsSummary
+        {
+            get
+            {
+                if (PropertyObject.Tags == null || PropertyObject.Tags.Count == 0)
+                    return "(no tags)";
+                return string.Join("\n", PropertyObject.Tags.Select(t => $"{t.Name} = {t.Value}"));
+            }
         }
 
         // ── Commands ───────────────────────────────────────────────────────────
@@ -384,6 +448,16 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 SetCertificateObject(_certificateObj!);
             }
             InvalidateCanSave();
+            RefreshFormProperties();
+        }
+
+        private void RefreshFormProperties()
+        {
+            this.RaisePropertyChanged(nameof(SelectedContentType));
+            this.RaisePropertyChanged(nameof(IsEnabled));
+            this.RaisePropertyChanged(nameof(ValidFrom));
+            this.RaisePropertyChanged(nameof(ValidUntil));
+            this.RaisePropertyChanged(nameof(TagsSummary));
         }
 
         private void InvalidateCanSave()

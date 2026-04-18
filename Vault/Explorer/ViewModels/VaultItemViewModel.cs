@@ -5,6 +5,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
@@ -60,6 +61,12 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         public string ChangedBy => Microsoft.Vault.Library.Utils.GetChangedBy(Tags);
         public string Md5 => Microsoft.Vault.Library.Utils.GetMd5(Tags);
+
+        /// <summary>Formatted tag list for the detail panel.</summary>
+        public string TagsDisplay =>
+            Tags == null || Tags.Count == 0
+                ? "(none)"
+                : string.Join("\n", Tags.Select(kvp => $"{kvp.Key} = {kvp.Value}"));
 
         public string Status =>
             (Enabled ? "Enabled" : "Disabled") + (Active ? ", Active" : ", Expired");
