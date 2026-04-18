@@ -4,6 +4,7 @@
 namespace Microsoft.Vault.Explorer.Views.Dialogs
 {
     using System.Reactive.Disposables;
+    using System.Reactive.Linq;
     using Avalonia.Controls;
     using Avalonia.ReactiveUI;
     using AvaloniaEdit;
@@ -45,8 +46,20 @@ namespace Microsoft.Vault.Explorer.Views.Dialogs
                 ViewModel.ValueText = ValueEditor.Text;
         }
 
-        private void OkButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-            => Close(true);
+        private async void OkButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        {
+            if (ViewModel?.CanSave != true) return;
+            try
+            {
+                var result = await ViewModel.SaveCommand.Execute().FirstAsync();
+                if (result != null)
+                    Close(true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Save failed: {ex}");
+            }
+        }
 
         private void CancelButton_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
             => Close(false);

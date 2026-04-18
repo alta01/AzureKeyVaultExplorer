@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Microsoft.Vault.Explorer.ViewModels"
-        xmlns:pgc="using:Avalonia.PropertyGrid.Controls"
         xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:materialIcons="clr-namespace:Material.Icons;assembly=Material.Icons"
         x:Class="Microsoft.Vault.Explorer.Views.MainWindow"
@@ -327,7 +326,7 @@
 
               <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="Transparent"/>
 
-              <!-- Property panel — scrollable so long values aren't clipped -->
+              <!-- Detail panel -->
               <Grid Grid.Column="2">
                 <TextBlock Text="Select an item to view its properties"
                            HorizontalAlignment="Center"
@@ -339,12 +338,91 @@
                            FontStyle="Italic"
                            Margin="12"
                            IsVisible="{Binding $parent[TabControl].DataContext.SelectedItem, Converter={x:Static ObjectConverters.IsNull}}"/>
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
                               IsVisible="{Binding $parent[TabControl].DataContext.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}">
-                  <pgc:PropertyGrid DataContext="{Binding $parent[TabControl].DataContext.SelectedItem}"
-                                    ShowTitle="False"
-                                    AllowFilter="False"/>
+                  <StackPanel DataContext="{Binding $parent[TabControl].DataContext.SelectedItem}"
+                              Margin="10,8" Spacing="14">
+
+                    <!-- Name (large) -->
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Name" FontSize="11" Opacity="0.5"/>
+                      <TextBlock Text="{Binding Name}"
+                                 FontSize="15" FontWeight="SemiBold"
+                                 TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- Status -->
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Status" FontSize="11" Opacity="0.5"/>
+                      <TextBlock Text="{Binding Status}" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Enabled -->
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Enabled" FontSize="11" Opacity="0.5"/>
+                      <TextBlock Text="{Binding Enabled}" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Expires -->
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Expires" FontSize="11" Opacity="0.5"/>
+                      <TextBlock Text="{Binding ExpiresDisplay}" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Created -->
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Created" FontSize="11" Opacity="0.5"/>
+                      <TextBlock Text="{Binding Created, StringFormat='{}{0:g}'}" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Updated -->
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Updated" FontSize="11" Opacity="0.5"/>
+                      <TextBlock Text="{Binding Updated, StringFormat='{}{0:g}'}" FontSize="13"/>
+                    </StackPanel>
+
+                    <!-- Changed By -->
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="Changed By" FontSize="11" Opacity="0.5"/>
+                      <TextBlock Text="{Binding ChangedBy}" FontSize="13" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- Separator before more info -->
+                    <Separator Margin="0,4"/>
+
+                    <!-- Misc (expandable) -->
+                    <Expander Header="More details" IsExpanded="False" Padding="0">
+                      <StackPanel Spacing="10" Margin="0,8,0,0">
+
+                        <!-- Version / Identifier -->
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="Identifier" FontSize="11" Opacity="0.5"/>
+                          <TextBlock Text="{Binding Id}" FontSize="11" TextWrapping="Wrap" Opacity="0.8"/>
+                        </StackPanel>
+
+                        <!-- Link -->
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="Link" FontSize="11" Opacity="0.5"/>
+                          <TextBlock Text="{Binding Link}" FontSize="11" TextWrapping="Wrap" Opacity="0.8"/>
+                        </StackPanel>
+
+                        <!-- Md5 -->
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="MD5" FontSize="11" Opacity="0.5"/>
+                          <TextBlock Text="{Binding Md5}" FontSize="11" Opacity="0.8"/>
+                        </StackPanel>
+
+                        <!-- Tags -->
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="Tags" FontSize="11" Opacity="0.5"/>
+                          <TextBlock Text="{Binding TagsDisplay}" FontSize="11" TextWrapping="Wrap" Opacity="0.8"/>
+                        </StackPanel>
+
+                      </StackPanel>
+                    </Expander>
+
+                  </StackPanel>
                 </ScrollViewer>
               </Grid>
             </Grid>
