@@ -8,6 +8,7 @@ namespace Microsoft.Vault.Library
     using System.Threading;
     using System.Threading.Tasks;
     using Azure.Core;
+    using Azure.Identity;
     using Microsoft.Identity.Client;
 
     /// <summary>
@@ -35,6 +36,23 @@ namespace Microsoft.Vault.Library
 
         public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
         {
+            // Try a targeted credential chain first: AzureCliCredential picks up `az login`
+            // immediately without browser prompts; ManagedIdentityCredential covers Azure-hosted.
+            // Critically, OperationCanceledException is re-thrown so the Cancel button works.
+            try
+            {
+                var credential = new ChainedTokenCredential(
+                    new AzureCliCredential(),
+                    new ManagedIdentityCredential()
+                );
+                var token = await credential.GetTokenAsync(requestContext, cancellationToken).ConfigureAwait(false);
+                _onAuthenticated?.Invoke(_userAliasType);
+                return token;
+            }
+            catch (OperationCanceledException) { throw; }              // propagate Cancel
+            catch (CredentialUnavailableException) { /* fall through */ }
+            catch { /* fall through to MSAL-based VaultAccess chain */ }
+
             Queue<Exception> exceptions = new Queue<Exception>();
             string vaultAccessTypes = "";
             foreach (VaultAccess va in _vaultAccesses)

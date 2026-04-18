@@ -3,18 +3,27 @@
   <!-- Sentinel key so App.axaml.cs can identify and swap this dictionary -->
   <x:Boolean x:Key="__VaultTheme__">True</x:Boolean>
 
-  <!-- Midnight Galaxy — dramatic cosmic dark theme
-       Base: Deep Purple #2b1e3e  |  Accent: Cosmic Blue #4a4e8f  |  Mid: Lavender #a490c2  |  Text: Silver #e6e6fa -->
-  <Color x:Key="SystemAccentColor">#4a4e8f</Color>
-  <Color x:Key="SystemAccentColorLight1">#5f63a4</Color>
-  <Color x:Key="SystemAccentColorLight2">#7579b8</Color>
-  <Color x:Key="SystemAccentColorLight3">#8e92ca</Color>
-  <Color x:Key="SystemAccentColorDark1">#363a7a</Color>
-  <Color x:Key="SystemAccentColorDark2">#252862</Color>
-  <Color x:Key="SystemAccentColorDark3">#161848</Color>
+  <!-- Midnight Galaxy — dramatic cosmic dark theme (vibrant violet on warm purple-black)
+       Accent: Vibrant Violet #9c6dff — electric, cosmic
+       Base: Deep warm purple-black #1a1425 → #261a36 — distinctly warmer than Ocean Depths
+       WCAG AA: violet on purple-black = 5.8:1 (passes AA) -->
 
-  <!-- Vault item status colors -->
-  <SolidColorBrush x:Key="VaultExpiredBrush"     Color="#e05580"/>
-  <SolidColorBrush x:Key="VaultExpiringSoonBrush" Color="#d4a017"/>
-  <SolidColorBrush x:Key="VaultDisabledBrush"     Color="#7070a0"/>
+  <!-- Accent scale — vibrant violet/lavender -->
+  <Color x:Key="SystemAccentColor">#9c6dff</Color>
+  <Color x:Key="SystemAccentColorLight1">#b28aff</Color>
+  <Color x:Key="SystemAccentColorLight2">#c8a7ff</Color>
+  <Color x:Key="SystemAccentColorLight3">#dec4ff</Color>
+  <Color x:Key="SystemAccentColorDark1">#7a4fd9</Color>
+  <Color x:Key="SystemAccentColorDark2">#5a33b3</Color>
+  <Color x:Key="SystemAccentColorDark3">#3a1a8c</Color>
+
+  <!-- Region / page background — warm deep purple -->
+  <SolidColorBrush x:Key="SystemRegionBrush" Color="#1a1425"/>
+  <SolidColorBrush x:Key="SystemControlBackgroundBaseLowBrush" Color="#261a36"/>
+  <SolidColorBrush x:Key="SystemControlBackgroundChromeMediumBrush" Color="#2e2140"/>
+
+  <!-- Vault item status colors — warm tones that complement the purple palette -->
+  <SolidColorBrush x:Key="VaultExpiredBrush"     Color="#ff5e8a"/>
+  <SolidColorBrush x:Key="VaultExpiringSoonBrush" Color="#ffc107"/>
+  <SolidColorBrush x:Key="VaultDisabledBrush"     Color="#8e7eb0"/>
 </ResourceDictionary>

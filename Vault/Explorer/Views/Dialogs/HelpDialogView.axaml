@@ -1,0 +1,124 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="Microsoft.Vault.Explorer.Views.Dialogs.HelpDialogView"
+        Title="Azure Key Vault Explorer — Help"
+        Width="620" Height="560"
+        MinWidth="500" MinHeight="400"
+        CanResize="True"
+        WindowStartupLocation="CenterOwner">
+
+  <Window.Styles>
+    <Style Selector="Button.hyperlink">
+      <Setter Property="Foreground" Value="{DynamicResource SystemAccentColor}"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FontFamily" Value="Monospace"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.hyperlink:pointerover /template/ ContentPresenter">
+      <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel Margin="16">
+    <Button DockPanel.Dock="Bottom" Content="Close" IsDefault="True" IsCancel="True"
+            Click="CloseButton_Click" Width="90" HorizontalAlignment="Right" Margin="0,12,0,0"/>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="12">
+
+        <!-- Header -->
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <mi:MaterialIcon Kind="InformationOutline" Width="28" Height="28" VerticalAlignment="Center"/>
+          <TextBlock Text="Azure Key Vault Explorer" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Keyboard shortcuts -->
+        <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="4" Padding="12,10">
+          <StackPanel>
+            <TextBlock Text="Keyboard shortcuts" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+            <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="F5"             FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="Refresh the current vault"  Margin="0,2"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Enter"          FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="Edit selected item"         Margin="0,2"/>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Delete"         FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="Delete selected item(s)"    Margin="0,2"/>
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Ctrl+F"         FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="Focus the search box (⌘+F on macOS)"  Margin="0,2"/>
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Ctrl+C"         FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="Copy value to clipboard (⌘+C on macOS)" Margin="0,2"/>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Getting started -->
+        <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="4" Padding="12,10">
+          <StackPanel>
+            <TextBlock Text="Getting started" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+            <TextBlock Text="1. Select a vault from the dropdown (top-left)" TextWrapping="Wrap" Margin="0,2"/>
+            <TextBlock Text='2. Choose "Pick vault from subscription…" to browse your Azure subscriptions and add a vault'
+                       TextWrapping="Wrap" Margin="0,2"/>
+            <TextBlock Text="3. Once a vault is loaded, use the toolbar to manage secrets and certificates"
+                       TextWrapping="Wrap" Margin="0,2"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Search -->
+        <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="4" Padding="12,10">
+          <StackPanel>
+            <TextBlock Text="Searching" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+            <TextBlock Text="The search box supports regular expressions." TextWrapping="Wrap" Margin="0,2"/>
+            <TextBlock Text='Example: ^prod-   matches all items starting with "prod-"'
+                       Margin="0,2" FontFamily="Monospace" FontSize="11"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Copy formats -->
+        <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="4" Padding="12,10">
+          <StackPanel>
+            <TextBlock Text="Copy formats" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+            <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="ENV"    FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="SECRETNAME=value"             Margin="0,2" FontFamily="Monospace" FontSize="11"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Docker" FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="--env SECRETNAME=value"       Margin="0,2" FontFamily="Monospace" FontSize="11"/>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="K8s"    FontFamily="Monospace" Margin="0,2"/>
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="Kubernetes secret YAML block" Margin="0,2" FontFamily="Monospace" FontSize="11"/>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Source code & issues -->
+        <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="4" Padding="12,10">
+          <StackPanel>
+            <TextBlock Text="Source code &amp; issues" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6"/>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+              <mi:MaterialIcon Kind="Github" Width="16" Height="16" VerticalAlignment="Center"/>
+              <Button Classes="hyperlink"
+                      Name="GitHubLink"
+                      Content="https://github.com/alta01/AzureKeyVaultExplorer"
+                      Click="GitHubLink_Click"
+                      ToolTip.Tip="Open the project repository"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2">
+              <mi:MaterialIcon Kind="BugOutline" Width="16" Height="16" VerticalAlignment="Center"/>
+              <Button Classes="hyperlink"
+                      Name="IssuesLink"
+                      Content="https://github.com/alta01/AzureKeyVaultExplorer/issues"
+                      Click="IssuesLink_Click"
+                      ToolTip.Tip="Report a bug or request a feature"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Version info -->
+        <TextBlock Name="VersionInfoText" FontSize="11" Opacity="0.6" FontFamily="Monospace" Margin="0,4,0,0"/>
+
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

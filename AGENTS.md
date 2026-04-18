@@ -4,139 +4,339 @@ This file provides context for AI coding agents working in this repository.
 
 ## What this project is
 
-Azure Key Vault Explorer is a Windows desktop application (.NET 10 / WinForms) for browsing,
-editing, and managing secrets, keys, and certificates stored in Azure Key Vault. It supports
-ClickOnce deployment so end users install and auto-update via a hosted manifest URL.
+Azure Key Vault Explorer is a **cross-platform** desktop app (net10.0 / Avalonia UI 11) for
+browsing, editing, and managing secrets, keys, and certificates in Azure Key Vault.
 
 This repository is a fork of [reysic/AzureKeyVaultExplorer](https://github.com/reysic/AzureKeyVaultExplorer),
 which originated from [microsoft/AzureKeyVaultExplorer](https://github.com/microsoft/AzureKeyVaultExplorer).
-Changes developed here are intended to be contributed back upstream via a PR to reysic's fork.
+The original app was Windows Forms only; this fork has been fully migrated to Avalonia UI so it
+runs on Windows, macOS, and Linux.
 
 ## Tech stack
 
 | Layer | Technology |
-|---|---|
-| UI | Windows Forms (.NET 10) |
-| Auth | Microsoft.Identity.Client (MSAL v4) — browser-based OAuth |
-| Azure SDK | Microsoft.Azure.Management.KeyVault (ARM), Microsoft.Azure.KeyVault (data plane) |
-| Publishing | ClickOnce via MSBuild `/target:publish` with `ClickOnceProfile.pubxml` |
-| CI | GitHub Actions (`.github/workflows/release.yml`), triggered by `v*` tags |
+|-------|-----------|
+| UI framework | Avalonia UI 11.3.8 |
+| MVVM | ReactiveUI + DynamicData (`SourceCache<T, TKey>`) |
+| Icons | Material.Icons.Avalonia 2.1.0 |
+| Auth | Microsoft.Identity.Client (MSAL) 4.83.3 — browser-based OAuth |
+| Azure (data plane) | Azure.Security.KeyVault.Secrets 4.7.0, Azure.Security.KeyVault.Certificates 4.7.0 |
+| Azure (management) | Azure.ResourceManager 1.14.0, Azure.ResourceManager.KeyVault 1.3.3 |
+| Azure (credential) | Azure.Identity 1.13.1 (AzureCliCredential + ManagedIdentityCredential chain in `VaultAccessTokenCredential`) |
+| DI container | Microsoft.Extensions.DependencyInjection 10.0.0 |
+| Settings | JSON in `SpecialFolder.ApplicationData/VaultExplorerNext/` |
+| Secrets encryption | Microsoft.AspNetCore.DataProtection 10.0.0 (cross-platform DPAPI replacement) |
+| Target framework | `net10.0` |
 
 ## Repository layout
 
 ```
-AzureKeyVaultExplorer.sln       Solution file
+AzureKeyVaultExplorer.sln
 Vault/
-  Explorer/                     Main WinForms app (VaultExplorer.csproj)
-    Common/                     Helpers: ActivationUri, Utils, UxOperation
-    Config/                     VaultConfigurationManager + JSON config templates
-    Controls/                   ListViews, custom WinForms controls
-    Dialogs/
-      Subscriptions/            SubscriptionsManagerDialog — vault picker via ARM
-      Secrets/                  SecretDialog
-      Certificates/             CertificateDialog
-      Settings/                 SettingsDialog
-    Model/                      Domain objects: PropObjects, ContentTypes, Tags, Aliases
-    Globals.cs                  All global URL constants (GitHub, ClickOnce install URL)
-    MainForm.cs                 Main window; hosts vault dropdown and secret list
-    Program.cs                  Entry point; handles ClickOnce activation URI
-  Library/                      Vault access abstractions (VaultAccess*, VaultConfig, etc.)
-  Core/                         Utilities shared across Library and Explorer
-  ClearClipboard/               Companion exe to clear clipboard after copy-secret
-  Build/                        T4 templates and version props
-.github/workflows/release.yml  CI release workflow
-release.ps1                     Local / CI publish script (requires MSBuild 17.14+)
-release.md                      Step-by-step release instructions
-tag_and_push.ps1               Creates and pushes a `v*` tag to trigger release
+  Explorer/                        Main Avalonia app (VaultExplorer.csproj)
+    App.axaml / App.axaml.cs       Avalonia application + DI container
+    Program.cs                     Entry point — BuildAvaloniaApp / Desktop lifetime
+    AppSettings.cs                 JSON-backed user settings
+    Themes/                        ResourceDictionary theme files (4 themes)
+    Views/                         .axaml views (no business logic)
+      MainWindow.axaml             Main window: menu, toolbar, vault tabs, status bar
+      Dialogs/
+        SecretDialogView.axaml
+        CertificateDialogView.axaml
+        SubscriptionsManagerView.axaml
+        SettingsView.axaml
+        MessageDialogView.axaml
+        ExceptionDialogView.axaml
+        PasswordDialogView.axaml
+    ViewModels/                    One ViewModel per View (ReactiveObject subclasses)
+      ViewModelBase.cs
+      MainWindowViewModel.cs       ISession impl; Tabs collection; all toolbar commands
+      VaultTabViewModel.cs         One tab = one open vault
+      VaultListViewModel.cs        DynamicData filtered/sorted list
+      VaultItemViewModel.cs        Base for secret/cert rows
+      VaultSecretViewModel.cs
+      VaultCertificateViewModel.cs
+      SettingsViewModel.cs
+      SubscriptionsManagerViewModel.cs
+      SecretDialogViewModel.cs
+      CertificateDialogViewModel.cs
+    Services/                      Platform-abstracted services (registered in DI)
+      IDialogService.cs + AvaloniaDialogService.cs
+      IClipboardService.cs + AvaloniaClipboardService.cs
+      INotificationService.cs + AvaloniaNotificationService.cs
+      ICertificatePickerService.cs + AvaloniaCertificatePickerService.cs
+      IIdleDetectionService.cs + AvaloniaIdleDetectionService.cs
+      IProtocolHandlerService.cs + platform impls
+    Common/                        Helpers: Globals, UxOperation, ActivationUri
+    Model/                         Domain objects: PropObjects, ContentTypes, Tags, Aliases
+  Library/                         Vault access abstractions (VaultLibrary.csproj)
+    Vault.cs                       Core Vault class; ListSecretsAsync, GetSecretAsync, etc.
+    VaultConfig.cs / VaultAccessType.cs  JSON-deserialized vault credential config
+    Utils.cs                       GuardVaultName, GuardTagKey, GuardTagValue, etc.
+  Core/                            Utilities shared across Library and Explorer
+  ClearClipboard/                  Companion exe: clears clipboard after TTL expires
 ```
-
-## Key constants — always keep these pointing to reysic
-
-`Vault/Explorer/Globals.cs` holds every URL string the app uses at runtime:
-
-```csharp
-OnlineActivationUri  = "https://reysic.github.io/AzureKeyVaultExplorer/VaultExplorer.application"
-GitHubUrl            = "https://github.com/reysic/AzureKeyVaultExplorer"
-GitHubIssuesUrl      = "https://github.com/reysic/AzureKeyVaultExplorer/issues"
-ActivationUrl        = "https://reysic.github.io/AzureKeyVaultExplorer/VaultExplorer.application"
-```
-
-`Vault/Explorer/Properties/PublishProfiles/ClickOnceProfile.pubxml` holds the ClickOnce
-`InstallUrl`, `ErrorReportUrl`, and `SupportUrl` — these must also point to reysic.
 
 ## How to build locally
 
-```
+```bash
 dotnet build AzureKeyVaultExplorer.sln
 ```
 
-Requirements: .NET 10 SDK (`dotnet --list-sdks` should show `10.x`).
+Requirements: .NET 10 SDK (`dotnet --list-sdks` should show `10.x`). No Visual Studio required;
+the project builds and runs on Linux, macOS, and Windows.
 
-## How to publish (ClickOnce release)
+## MVVM conventions
 
-See `release.md`. Short version:
+### ViewModels
 
-1. Run `.\tag_and_push.ps1` — creates and pushes a `v*` tag.
-2. GitHub Actions runs `release.ps1` which publishes with MSBuild and pushes output to `gh-pages`.
-3. Users install / update from `https://reysic.github.io/AzureKeyVaultExplorer`.
+- Inherit `ViewModelBase` (extends `ReactiveObject`)
+- Properties use `this.RaiseAndSetIfChanged(ref _field, value)`
+- Commands use `ReactiveCommand.Create` / `CreateFromTask`
+- No `System.Windows.Forms` or `System.Drawing` imports anywhere in ViewModels/Services
+- Constructor injection only — services come from `App.Services` (Microsoft.Extensions.DI)
 
-For local-only publish validation (no gh-pages push):
-```powershell
-.\release.ps1 -OnlyBuild
-```
+### Views (code-behind)
 
-Requires: **Visual Studio 2022 17.14+** (MSBuild 17.14+ for .NET 10 ClickOnce).
+- Only wiring: `WhenActivated`, event routing to ViewModel methods, `FindControl`
+- No business logic in code-behind
+- Interactions (dialogs that need a window parent) are handled via `Interaction<TInput, TOutput>`
+  defined on the ViewModel and subscribed in the View's `WhenActivated`
 
-## Vault picker dialog (SubscriptionsManagerDialog)
+### Reactive filtering (DynamicData pattern)
 
-The "Pick vault from subscription..." flow in `MainForm.cs` opens
-`Vault/Explorer/Dialogs/Subscriptions/SubscriptionsManagerDialog.cs`.
-
-Key behaviors to be aware of when editing it:
-
-- **Account → Tenant → Subscription → Vault** — cascading async selection.
-- `uxButtonOK` starts **disabled**; it is only enabled after `Vaults.GetAsync` succeeds in
-  `uxListViewVaults_SelectedIndexChanged`. A try-catch wraps this call — errors show a warning
-  MessageBox but leave the dialog open so the user can pick a different vault.
-- The onboarding prompt (no saved accounts) fires from the `Shown` event, not the constructor,
-  so the form is fully rendered before any MessageBox appears.
-- `MinimumSize` is set in the Designer to prevent the window from being resized so small that
-  the OK/Cancel buttons are clipped.
-
-## UxOperation pattern
-
-`Common/UxOperation.cs` is used with `using` to show progress while async work runs:
+`VaultListViewModel` uses `SourceCache<VaultItemViewModel, string>` (keyed by `Name`), not
+`SourceList<T>`. The full reactive chain:
 
 ```csharp
-using (var op = this.NewUxOperationWithProgress(controlsToDisable))
-{
-    // async work here; op.CancellationToken is available
-}
+_source.Connect()
+    .Filter(this.WhenAnyValue(x => x.SearchText)
+        .Select(q => (Func<VaultItemViewModel, bool>)(item =>
+            string.IsNullOrEmpty(q) || item.Name.Contains(q, StringComparison.OrdinalIgnoreCase))))
+    .Sort(SortExpressionComparer<VaultItemViewModel>.Ascending(x => x.Name))
+    .ObserveOn(RxApp.MainThreadScheduler)
+    .Bind(out var items)
+    .Subscribe()
+    .DisposeWith(_disposables);
+Items = items;
 ```
 
-`Dispose()` re-enables controls, hides the progress bar, and resets the cursor.
+> Note: `.Sort()` is obsolete in DynamicData 9.4+; replacement is `.SortAndBind()`. Both work;
+> the current code uses `.Sort()` followed by `.Bind()` (tracked in known open items).
+
+## Vault tab architecture
+
+`MainWindowViewModel` owns `ObservableCollection<VaultTabViewModel> Tabs`. Each tab holds one
+`VaultListViewModel` + the `VaultAlias` + `Library.Vault` for that session.
+
+`VaultListViewModel VaultListViewModel => SelectedTab?.VaultList ?? _emptyVaultList;` is the
+proxy property that AXAML binds to — always valid even when no tab is open.
+
+Commands (`EditCommand`, `DeleteCommand`, etc.) route through `SelectedTab?.VaultList?.SelectedItem`.
+
+## Service injection
+
+Services are registered in `App.axaml.cs → ConfigureServices()`:
+
+```csharp
+services.AddSingleton<IDialogService, AvaloniaDialogService>();
+services.AddSingleton<IClipboardService, AvaloniaClipboardService>();
+// ... etc.
+services.AddTransient<MainWindowViewModel>();
+```
+
+In ViewModels: receive via constructor injection.
+In Views/code-behind (last resort): `App.Services.GetRequiredService<IDialogService>()`.
+
+## Theme system
+
+Four `ResourceDictionary` files in `Vault/Explorer/Themes/` override Avalonia Fluent theme keys.
+`App.ApplyTheme(string name)` (in `App.axaml.cs`) merges the selected dictionary at runtime and
+sets `RequestedThemeVariant` to `Light` or `Dark` accordingly.
+
+Default theme: **Arctic Frost** (light). Changed in `AppSettings.cs`:
+```csharp
+public string Theme { get; set; } = "Arctic Frost";
+```
+
+## Toolbar layout (MainWindow.axaml)
+
+Toolbar buttons are grouped into **6 rounded boxes** (`Border` with `Background="#14808080"`,
+`CornerRadius="4"`, `Padding="1"`) for visual containment. Groups and their buttons:
+
+1. **Refresh** — Refresh
+2. **Create** — + Secret, + Cert
+3. **Item Actions** — Edit, Enable/Disable, Delete
+4. **Share** — Copy, Link, Save
+5. **Copy As** — ENV, Docker, K8s, Name
+6. **Settings** — Settings, Help
+
+Favorite is standalone (with a thin separator), between Copy-As and Settings.
+
+The toolbar is wrapped in a `ScrollViewer` with `AllowAutoHide="True"` so the horizontal
+scrollbar only appears on hover. Global scrollbar styling in `App.axaml` forces horizontal
+scrollbars to `Height=6`.
+
+## Vault auth flow
+
+`VaultAccessTokenCredential` (Library) bridges MSAL-based `VaultAccess` to `TokenCredential`.
+The `GetTokenAsync` path:
+
+1. **First attempt:** `ChainedTokenCredential(AzureCliCredential, ManagedIdentityCredential)`
+   — uses `az login` tokens on dev machines; uses managed identity when running in Azure.
+2. **On `OperationCanceledException`:** re-thrown immediately so Cancel button works.
+3. **On `CredentialUnavailableException` or other errors:** falls through to the MSAL
+   `VaultAccess` chain (certificate / client-credential / user-interactive).
+
+When opening a vault picked from the subscription browser, `MainWindowViewModel.OpenVaultTabAsync`
+constructs the `VaultsConfig` in memory — no `Vaults.json` file is read — so the app works
+without any local config file.
+
+## Vault Unreachable dialog
+
+When `OpenVaultTabAsync` catches a non-cancellation exception:
+1. Removes the speculatively added tab
+2. Sets `VaultConnectionError` (binds to an orange ⚠ button next to the vault dropdown)
+3. Shows `VaultUnreachableDialogView` via `ShowVaultUnreachableInteraction`
+
+The dialog offers **Retry** (loops with incrementing attempt counter), **Back to vault picker**
+(reopens the Subscriptions Manager), and **Cancel** (closes the dialog).
+
+## Help dialog
+
+`ShowHelpInteraction` opens `HelpDialogView` — a dedicated Window (not a `MessageDialog`)
+with structured sections (Keyboard shortcuts, Getting started, Searching, Copy formats,
+Source code/Issues). Links are clickable via `Process.Start(new ProcessStartInfo { FileName=url, UseShellExecute=true })`
+with `xdg-open` fallback for Linux.
+
+## Keyboard shortcuts (MainWindow.axaml.cs → OnKeyDown)
+
+Both `KeyModifiers.Control` (Win/Linux) and `KeyModifiers.Meta` (macOS ⌘) are accepted for
+the "command" modifier. Currently wired:
+
+- `F5` → Refresh
+- `Delete` → Delete
+- `Enter` → Edit (only when focus is not inside a `TextBox`)
+- `Ctrl/⌘+F` → Focus search box
+- `Ctrl/⌘+C` → Copy value (only when focus is not inside a `TextBox`)
+
+## Themes (Vault/Explorer/Themes/)
+
+Four `ResourceDictionary` files override `SystemAccentColor` + `SystemRegionBrush` +
+`SystemControlBackgroundBaseLowBrush` for strong visual distinction (not just accent tint).
+
+| Theme | Variant | Accent | Base | Vibe |
+|-------|---------|--------|------|------|
+| Arctic Frost (default) | Light | Steel blue `#4a6fa5` | white | Crisp cool |
+| Modern Minimalist | Light | Slate gray `#708090` | white | Neutral |
+| Ocean Depths | Dark | Cyan-teal `#00b8d4` | deep navy `#0e1d28` | Maritime |
+| Midnight Galaxy | Dark | Violet `#9c6dff` | warm purple-black `#1a1425` | Cosmic |
+
+WCAG-AA contrast is targeted on all accent/base pairs.
+
+## Linux packaging
+
+`Vault/Explorer/packaging/linux/vault-explorer.desktop` — install to
+`~/.local/share/applications/` so GNOME/KDE shells show the correct taskbar icon
+(`Window.Icon` alone isn't enough). See `packaging/linux/README.md` for install steps.
+
+## Security notes
+
+- `TypeNameHandling` in `Vault.cs` JSON deserialization is set to `None`. Polymorphism for
+  `VaultAccess` subtypes is handled per-property via `[JsonProperty(ItemTypeNameHandling = TypeNameHandling.Objects)]`.
+- Tag keys and values are validated with `Utils.GuardTagKey` / `Utils.GuardTagValue` (256-char
+  Azure limits; `microsoft` prefix rejected for keys).
+- Settings path fields validate that values are absolute paths with no `..` traversal components.
+- `GetSecretAsync` and `GetCertificateAsync` retry with exponential back-off on HTTP 429.
 
 ## Configuration files (user-editable)
 
-Located in the app's install folder or a user-specified "Root location":
+Loaded from the path set in **Settings → JSON configuration files root** (default: app directory):
 
 | File | Purpose |
-|---|---|
-| `Vaults.json` | Vault credential definitions |
-| `VaultAliases.json` | Named vault aliases shown in the main dropdown |
+|------|---------|
+| `Vaults.json` | Vault credential definitions (optional if current account has access) |
+| `VaultAliases.json` | Named vault aliases in the main dropdown |
 | `SecretKinds.json` | Regex-validated secret types with tag schemas |
 | `CustomTags.json` | Tag definitions referenced by SecretKinds |
 
-## Known open items
+## MCP Tooling (Copilot CLI & Claude Code)
 
-- Deprecated Azure SDK packages (Microsoft.Azure.KeyVault, Microsoft.Azure.Management.KeyVault,
-  Microsoft.IdentityModel.Clients.ActiveDirectory, etc.) — migration to Track 2 non-preview
-  packages is a pending backlog item.
-- PowerShell integration was removed (does not work with .NET 8+).
+Two MCP servers are configured in `.copilot/mcp-config.json` for use with GitHub Copilot CLI,
+and in `.claude.json` (project scope) for Claude Code.
+
+| Server | Type | Endpoint | Purpose |
+|--------|------|----------|---------|
+| `avalonia-docs` | HTTP | `https://docs-mcp.avaloniaui.net/mcp` | Avalonia UI docs — AXAML syntax, controls, binding, theming |
+| `azure-mcp` | local (stdio) | `npx -y @azure/mcp@latest server start` | Azure resource management — list vaults, subscriptions, access policies |
+
+**`avalonia-docs`** — invoke when writing or debugging AXAML, asking about control properties,
+ReactiveUI/DynamicData patterns, or any Avalonia-specific API.
+
+**`azure-mcp`** — invoke to query live Azure resources (requires `az login`). Useful for
+verifying vault access, listing secrets, or inspecting subscription structure.
+
+Copilot CLI config: `~/.copilot/mcp-config.json` (user-level) + `.copilot/mcp-config.json` (repo-level)
+
+---
+
+## Build State & Warnings
+
+```bash
+dotnet build Vault/Explorer/VaultExplorer.csproj
+# Result: 0 errors, ~169 warnings
+```
+
+Warning categories (all non-blocking):
+
+| Category | Count | Root cause | Files |
+|----------|-------|-----------|-------|
+| `CS8632` — nullable reference | ~42 | `?` annotation outside `#nullable enable` | `MainWindowViewModel.cs`, dialog VMs |
+| `CS0618` — obsolete Avalonia APIs | ~25 | `DragEventArgs.Data`, `DataFormats.Files/Text`, `IClipboard.SetDataObjectAsync` | `MainWindow.axaml.cs`, `AvaloniaClipboardService.cs` |
+| `CS0618` — DynamicData `.Sort()` | 1 | Should use `.SortAndBind()` in DynamicData 9.4+ | `VaultListViewModel.cs:116` |
+| `CA1416` — platform-specific | 1 | Linux-only service; correct at runtime | `ProtocolHandlerServiceFactory.cs` |
+
+---
+
+## Testing
+
+**No automated tests exist.** The project has no test projects; all testing is manual.
+
+If adding tests, recommended stack:
+- **Unit**: xUnit 2.x + `ReactiveUI.Testing` for ViewModel assertions
+- **Mock Azure SDK**: `Azure.Core.TestFramework` or plain `Moq`
+- **Project name**: `Vault/VaultExplorer.Tests/`
+
+---
 
 ## Coding conventions
 
 - Namespace prefix: `Microsoft.Vault.*`
-- `async void` is used only for WinForms event handlers; wrap async body in try-catch.
-- All user-visible strings are inline (no resource file abstraction needed for this tool).
-- Designer-generated code lives in `*.Designer.cs`; do not edit `.resx` binary sections manually.
+- `async void` only in Avalonia event handlers; wrap body in try-catch.
+- All user-visible strings are inline (no resource file abstraction).
+- No `*.Designer.cs` or `*.resx` files — all removed in the WinForms→Avalonia migration.
+- AXAML `Kind` attributes for `MaterialIcon` inside `DataTemplate` must use
+  `{x:Static materialIcons:MaterialIconKind.IconName}` — plain string values don't work in
+  compiled DataTemplates.
+
+## Known open items
+
+- `vault://` protocol handler: Windows registry registration works; macOS `.plist` registration
+  works; **Linux `.desktop` MIME registration not yet implemented** —
+  `Services/LinuxProtocolHandlerService.cs` throws `NotSupportedException`.
+- Notification service (`Services/AvaloniaNotificationService.cs:14`) is a Phase 3 stub — calls
+  log to `Debug.WriteLine` only. Planned: integrate `Notification.Avalonia` NuGet for native OS
+  toasts (Windows: Toast, Linux: D-Bus, macOS: NSUserNotification).
+- Certificate picker service (`Services/AvaloniaCertificatePickerService.cs:19`) is a Phase 3 stub
+  — throws `NotSupportedException`. Planned: Avalonia Window listing non-expired X509 certs from
+  the OS certificate store.
+- Secret compression (gzip + base64 content type) has backend methods in `Library/Vault.cs` but is
+  **not wired to the UI** — `SecretDialogViewModel` / `SecretDialogView.axaml` have no compression
+  toggle.
+- Obsolete Avalonia drag-drop APIs in `MainWindow.axaml.cs` (`DragEventArgs.Data`,
+  `DataFormats.Files`) — emit CS0618 warnings; functional but should migrate to Avalonia 11.4+ API.
+- DynamicData `Sort()` + `Bind()` in `VaultListViewModel.cs:116` should migrate to `SortAndBind()`
+  (DynamicData 9.4+ preferred API).
+- `ClearClipboard.exe` is Windows-only — clipboard auto-clear silently skips on Linux/macOS.
+- PowerShell integration was removed (the upstream WinForms implementation doesn't port cleanly).
+- No automated tests — the entire app is manually tested.

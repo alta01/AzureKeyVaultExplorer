@@ -23,13 +23,10 @@ namespace Microsoft.Vault.Explorer.ViewModels
         // ── Content ────────────────────────────────────────────────────────────
         public VaultListViewModel VaultList { get; } = new();
 
-        // ── Item selection (proxied from the DataGrid in this tab) ─────────────
-        private VaultItemViewModel? _selectedItem;
-        public VaultItemViewModel? SelectedItem
-        {
-            get => _selectedItem;
-            set => this.RaiseAndSetIfChanged(ref _selectedItem, value);
-        }
+        // SelectedItem is intentionally not on this VM — the DataGrid in the ContentTemplate
+        // binds directly up to MainWindowViewModel.SelectedItem so toolbar canExecute predicates
+        // re-enable as soon as a row is selected. Keeping a per-tab selection here would
+        // require an extra synchroniser and break command availability.
 
         // ── Commands ───────────────────────────────────────────────────────────
         public ReactiveCommand<Unit, VaultTabViewModel> CloseCommand { get; }

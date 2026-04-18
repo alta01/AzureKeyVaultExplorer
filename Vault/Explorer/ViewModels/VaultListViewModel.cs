@@ -94,17 +94,20 @@ namespace Microsoft.Vault.Explorer.ViewModels
             var sortObservable = this.WhenAnyValue(x => x.SortColumn, x => x.SortAscending)
                 .Select(t => BuildSortComparer(t.Item1, t.Item2));
 
-            // Build the filter predicate from search text
+            // Build the filter predicate from search text.
+            // StartWith(string.Empty) ensures the filter emits immediately on subscription
+            // so items added before the 150ms throttle fires are still visible.
             var filterObservable = this.WhenAnyValue(x => x.SearchText)
                 .Throttle(TimeSpan.FromMilliseconds(150), RxApp.MainThreadScheduler)
+                .StartWith(string.Empty)
                 .Select(BuildFilter);
 
-            // Main Items pipeline: filter → sort → bind
+            // Main Items pipeline: filter → sort → bind.
+            // SortAndBind replaces the deprecated Sort(...).Bind(...) pair.
             _source.Connect()
                 .Filter(filterObservable)
-                .Sort(sortObservable)
+                .SortAndBind(out var items, sortObservable)
                 .ObserveOn(RxApp.MainThreadScheduler)
-                .Bind(out var items)
                 .Subscribe()
                 .DisposeWith(_disposables);
             Items = items;

@@ -74,7 +74,7 @@
 
       <GridSplitter Grid.Row="1" ResizeDirection="Rows" Background="Transparent"/>
 
-      <!-- Bottom: access check bar + vault property grid -->
+      <!-- Bottom: access check bar + clean vault details form -->
       <DockPanel Grid.Row="2">
         <!-- Access check status -->
         <StackPanel DockPanel.Dock="Top" Margin="0,2,0,4">
@@ -88,8 +88,38 @@
                      FontSize="11"
                      FontWeight="SemiBold"/>
         </StackPanel>
-        <pgc:PropertyGrid DataContext="{Binding VaultDetails}"
-                          ShowTitle="False"/>
+
+        <!-- Vault details — simple form, no category/filter buttons -->
+        <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="3"
+                Padding="10,8"
+                DataContext="{Binding VaultDetails}"
+                IsVisible="{Binding Converter={x:Static ObjectConverters.IsNotNull}}">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                  HorizontalAlignment="Stretch">
+              <TextBlock           Grid.Row="0" Grid.Column="0" Text="Name"              FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}"     Margin="0,2" TextWrapping="Wrap"/>
+
+              <TextBlock           Grid.Row="1" Grid.Column="0" Text="URI"               FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Uri}"     Margin="0,2" TextWrapping="Wrap"/>
+
+              <TextBlock           Grid.Row="2" Grid.Column="0" Text="Location"          FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Location}" Margin="0,2"/>
+
+              <TextBlock           Grid.Row="3" Grid.Column="0" Text="Subscription"      FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SubscriptionName}" Margin="0,2"/>
+
+              <TextBlock           Grid.Row="4" Grid.Column="0" Text="Resource group"    FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ResourceGroupName}" Margin="0,2"/>
+
+              <TextBlock           Grid.Row="5" Grid.Column="0" Text="SKU"               FontWeight="SemiBold" Margin="0,2"/>
+              <SelectableTextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Sku}"     Margin="0,2"/>
+
+              <TextBlock           Grid.Row="6" Grid.Column="0" Text="Subscription id"   FontWeight="SemiBold" Margin="0,2" Opacity="0.7"/>
+              <SelectableTextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SubscriptionId}" Margin="0,2" Opacity="0.7" FontFamily="Monospace" FontSize="11"/>
+            </Grid>
+          </ScrollViewer>
+        </Border>
       </DockPanel>
 
     </Grid>
