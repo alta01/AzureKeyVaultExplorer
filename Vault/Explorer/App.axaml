@@ -6,6 +6,7 @@
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
         <materialIcons:MaterialIconStyles />
         <!-- Show tooltips even on disabled buttons so users know what actions require -->
         <Style Selector="Button">
