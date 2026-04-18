@@ -241,7 +241,7 @@ namespace Microsoft.Vault.Explorer.Views
                 items.Add(new Separator());
                 items.Add(MenuItem("Edit...", ViewModel.EditCommand, "PencilOutline", "Enter"));
                 items.Add(MenuItem(ViewModel.ToggleText, ViewModel.ToggleCommand, "LockOpenOutline"));
-                items.Add(MenuItem("Delete...", ViewModel.DeleteCommand, "TrashCanOutline", "Del"));
+                items.Add(MenuItem("Delete...", ViewModel.DeleteCommand, "TrashCanOutline", "Delete"));
                 items.Add(new Separator());
                 items.Add(MenuItem("Copy value", ViewModel.CopyValueCommand, "ContentCopy"));
                 items.Add(MenuItem("Copy link", ViewModel.CopyLinkCommand, "LinkVariant"));
