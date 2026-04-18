@@ -7,6 +7,10 @@
     <Application.Styles>
         <FluentTheme />
         <materialIcons:MaterialIconStyles />
+        <!-- Show tooltips even on disabled buttons so users know what actions require -->
+        <Style Selector="Button">
+            <Setter Property="ToolTip.ShowOnDisabled" Value="True"/>
+        </Style>
         <!-- Keep horizontal scrollbars slim so they don't overlap toolbar button text.
              Fluent theme sets MinHeight internally; override explicitly. -->
         <Style Selector="ScrollBar:horizontal">
