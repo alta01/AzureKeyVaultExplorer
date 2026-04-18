@@ -103,11 +103,13 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 .Select(BuildFilter);
 
             // Main Items pipeline: filter → sort → bind.
-            // SortAndBind replaces the deprecated Sort(...).Bind(...) pair.
+            // .ObserveOn() MUST come before .SortAndBind() so collection mutations
+            // are marshalled to the UI thread before the ReadOnlyObservableCollection
+            // is updated.
             _source.Connect()
                 .Filter(filterObservable)
-                .SortAndBind(out var items, sortObservable)
                 .ObserveOn(RxApp.MainThreadScheduler)
+                .SortAndBind(out var items, sortObservable)
                 .Subscribe()
                 .DisposeWith(_disposables);
             Items = items;

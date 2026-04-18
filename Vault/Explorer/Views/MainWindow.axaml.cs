@@ -177,6 +177,7 @@ namespace Microsoft.Vault.Explorer.Views
             grid.AddHandler(DragDrop.DropEvent, OnGridDrop);
             grid.AddHandler(DragDrop.DragOverEvent, OnGridDragOver);
             grid.ContextRequested += OnDataGridContextRequested;
+            grid.Sorting += OnDataGridSorting;
         }
 
         private void OnDataGridUnloaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -185,6 +186,37 @@ namespace Microsoft.Vault.Explorer.Views
             grid.RemoveHandler(DragDrop.DropEvent, OnGridDrop);
             grid.RemoveHandler(DragDrop.DragOverEvent, OnGridDragOver);
             grid.ContextRequested -= OnDataGridContextRequested;
+            grid.Sorting -= OnDataGridSorting;
+        }
+
+        // ── DataGrid column-header sort → ViewModel ───────────────────────────
+
+        private void OnDataGridSorting(object? sender, DataGridColumnEventArgs e)
+        {
+            var list = ViewModel?.VaultListViewModel;
+            if (list == null) return;
+
+            var newColumn = e.Column.Header?.ToString() switch
+            {
+                "Name"       => VaultListSortColumn.Name,
+                "Updated"    => VaultListSortColumn.Updated,
+                "Changed By" => VaultListSortColumn.ChangedBy,
+                "Expires"    => VaultListSortColumn.Expires,
+                _            => (VaultListSortColumn?)null,
+            };
+
+            if (newColumn == null) return;
+
+            if (list.SortColumn == newColumn.Value)
+                list.SortAscending = !list.SortAscending;
+            else
+            {
+                list.SortColumn = newColumn.Value;
+                list.SortAscending = true;
+            }
+
+            // Cancel DataGrid's built-in sort — DynamicData owns the collection order.
+            e.Handled = true;
         }
 
         // ── Right-click context menu ───────────────────────────────────────────

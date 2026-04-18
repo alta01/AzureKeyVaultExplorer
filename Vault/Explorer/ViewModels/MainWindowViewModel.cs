@@ -457,6 +457,7 @@ namespace Microsoft.Vault.Explorer.ViewModels
                     tab = new VaultTabViewModel(alias, vault);
                     Tabs.Add(tab);
                     tabAdded = true;
+                    SelectedItem = null;
                 }
             }
             catch (Exception ctorEx)
