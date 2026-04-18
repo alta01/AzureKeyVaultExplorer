@@ -103,13 +103,15 @@ namespace Microsoft.Vault.Explorer.ViewModels
                 .Select(BuildFilter);
 
             // Main Items pipeline: filter → sort → bind.
-            // .ObserveOn() MUST come before .SortAndBind() so collection mutations
-            // are marshalled to the UI thread before the ReadOnlyObservableCollection
-            // is updated.
+            // SortAndBind replaces the deprecated Sort(...).Bind(...) pair.
+            // NOTE: .ObserveOn() must stay AFTER .SortAndBind() — placing it before
+            // breaks changeset delivery to SortAndBind in DynamicData 9.4.
+            // Thread safety is ensured by the caller: items are always added via
+            // Dispatcher.UIThread.Post() in OpenVaultTabAsync.
             _source.Connect()
                 .Filter(filterObservable)
-                .ObserveOn(RxApp.MainThreadScheduler)
                 .SortAndBind(out var items, sortObservable)
+                .ObserveOn(RxApp.MainThreadScheduler)
                 .Subscribe()
                 .DisposeWith(_disposables);
             Items = items;
