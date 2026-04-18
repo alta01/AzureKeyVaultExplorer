@@ -16,15 +16,16 @@ runs on Windows, macOS, and Linux.
 
 | Layer | Technology |
 |-------|-----------|
-| UI framework | Avalonia UI 11.3.x |
-| MVVM | ReactiveUI + DynamicData (`SourceList<T>`) |
+| UI framework | Avalonia UI 11.3.8 |
+| MVVM | ReactiveUI + DynamicData (`SourceCache<T, TKey>`) |
 | Icons | Material.Icons.Avalonia 2.1.0 |
-| Auth | Microsoft.Identity.Client (MSAL v4) — browser-based OAuth |
-| Azure (data plane) | Azure.Security.KeyVault.Secrets 4.7, Azure.Security.KeyVault.Certificates 4.7 |
-| Azure (management) | Azure.ResourceManager 1.14, Azure.ResourceManager.KeyVault 1.3 |
+| Auth | Microsoft.Identity.Client (MSAL) 4.83.3 — browser-based OAuth |
+| Azure (data plane) | Azure.Security.KeyVault.Secrets 4.7.0, Azure.Security.KeyVault.Certificates 4.7.0 |
+| Azure (management) | Azure.ResourceManager 1.14.0, Azure.ResourceManager.KeyVault 1.3.3 |
 | Azure (credential) | Azure.Identity 1.13.1 (AzureCliCredential + ManagedIdentityCredential chain in `VaultAccessTokenCredential`) |
+| DI container | Microsoft.Extensions.DependencyInjection 10.0.0 |
 | Settings | JSON in `SpecialFolder.ApplicationData/VaultExplorerNext/` |
-| Secrets encryption | Microsoft.AspNetCore.DataProtection (cross-platform DPAPI replacement) |
+| Secrets encryption | Microsoft.AspNetCore.DataProtection 10.0.0 (cross-platform DPAPI replacement) |
 | Target framework | `net10.0` |
 
 ## Repository layout
@@ -104,6 +105,9 @@ the project builds and runs on Linux, macOS, and Windows.
 
 ### Reactive filtering (DynamicData pattern)
 
+`VaultListViewModel` uses `SourceCache<VaultItemViewModel, string>` (keyed by `Name`), not
+`SourceList<T>`. The full reactive chain:
+
 ```csharp
 _source.Connect()
     .Filter(this.WhenAnyValue(x => x.SearchText)
@@ -116,6 +120,9 @@ _source.Connect()
     .DisposeWith(_disposables);
 Items = items;
 ```
+
+> Note: `.Sort()` is obsolete in DynamicData 9.4+; replacement is `.SortAndBind()`. Both work;
+> the current code uses `.Sort()` followed by `.Bind()` (tracked in known open items).
 
 ## Vault tab architecture
 
@@ -253,6 +260,55 @@ Loaded from the path set in **Settings → JSON configuration files root** (defa
 | `SecretKinds.json` | Regex-validated secret types with tag schemas |
 | `CustomTags.json` | Tag definitions referenced by SecretKinds |
 
+## MCP Tooling (Copilot CLI & Claude Code)
+
+Two MCP servers are configured in `.copilot/mcp-config.json` for use with GitHub Copilot CLI,
+and in `.claude.json` (project scope) for Claude Code.
+
+| Server | Type | Endpoint | Purpose |
+|--------|------|----------|---------|
+| `avalonia-docs` | HTTP | `https://docs-mcp.avaloniaui.net/mcp` | Avalonia UI docs — AXAML syntax, controls, binding, theming |
+| `azure-mcp` | local (stdio) | `npx -y @azure/mcp@latest server start` | Azure resource management — list vaults, subscriptions, access policies |
+
+**`avalonia-docs`** — invoke when writing or debugging AXAML, asking about control properties,
+ReactiveUI/DynamicData patterns, or any Avalonia-specific API.
+
+**`azure-mcp`** — invoke to query live Azure resources (requires `az login`). Useful for
+verifying vault access, listing secrets, or inspecting subscription structure.
+
+Copilot CLI config: `~/.copilot/mcp-config.json` (user-level) + `.copilot/mcp-config.json` (repo-level)
+
+---
+
+## Build State & Warnings
+
+```bash
+dotnet build Vault/Explorer/VaultExplorer.csproj
+# Result: 0 errors, ~169 warnings
+```
+
+Warning categories (all non-blocking):
+
+| Category | Count | Root cause | Files |
+|----------|-------|-----------|-------|
+| `CS8632` — nullable reference | ~42 | `?` annotation outside `#nullable enable` | `MainWindowViewModel.cs`, dialog VMs |
+| `CS0618` — obsolete Avalonia APIs | ~25 | `DragEventArgs.Data`, `DataFormats.Files/Text`, `IClipboard.SetDataObjectAsync` | `MainWindow.axaml.cs`, `AvaloniaClipboardService.cs` |
+| `CS0618` — DynamicData `.Sort()` | 1 | Should use `.SortAndBind()` in DynamicData 9.4+ | `VaultListViewModel.cs:116` |
+| `CA1416` — platform-specific | 1 | Linux-only service; correct at runtime | `ProtocolHandlerServiceFactory.cs` |
+
+---
+
+## Testing
+
+**No automated tests exist.** The project has no test projects; all testing is manual.
+
+If adding tests, recommended stack:
+- **Unit**: xUnit 2.x + `ReactiveUI.Testing` for ViewModel assertions
+- **Mock Azure SDK**: `Azure.Core.TestFramework` or plain `Moq`
+- **Project name**: `Vault/VaultExplorer.Tests/`
+
+---
+
 ## Coding conventions
 
 - Namespace prefix: `Microsoft.Vault.*`
@@ -265,8 +321,22 @@ Loaded from the path set in **Settings → JSON configuration files root** (defa
 
 ## Known open items
 
-- `vault://` protocol handler: Windows registry registration works; Linux `.desktop` MIME
-  registration not yet implemented.
-- Secret compression (gzip + base64 content type) is in `Library` but not yet wired to
-  `SecretDialogViewModel`.
+- `vault://` protocol handler: Windows registry registration works; macOS `.plist` registration
+  works; **Linux `.desktop` MIME registration not yet implemented** —
+  `Services/LinuxProtocolHandlerService.cs` throws `NotSupportedException`.
+- Notification service (`Services/AvaloniaNotificationService.cs:14`) is a Phase 3 stub — calls
+  log to `Debug.WriteLine` only. Planned: integrate `Notification.Avalonia` NuGet for native OS
+  toasts (Windows: Toast, Linux: D-Bus, macOS: NSUserNotification).
+- Certificate picker service (`Services/AvaloniaCertificatePickerService.cs:19`) is a Phase 3 stub
+  — throws `NotSupportedException`. Planned: Avalonia Window listing non-expired X509 certs from
+  the OS certificate store.
+- Secret compression (gzip + base64 content type) has backend methods in `Library/Vault.cs` but is
+  **not wired to the UI** — `SecretDialogViewModel` / `SecretDialogView.axaml` have no compression
+  toggle.
+- Obsolete Avalonia drag-drop APIs in `MainWindow.axaml.cs` (`DragEventArgs.Data`,
+  `DataFormats.Files`) — emit CS0618 warnings; functional but should migrate to Avalonia 11.4+ API.
+- DynamicData `Sort()` + `Bind()` in `VaultListViewModel.cs:116` should migrate to `SortAndBind()`
+  (DynamicData 9.4+ preferred API).
+- `ClearClipboard.exe` is Windows-only — clipboard auto-clear silently skips on Linux/macOS.
 - PowerShell integration was removed (the upstream WinForms implementation doesn't port cleanly).
+- No automated tests — the entire app is manually tested.
