@@ -66,7 +66,13 @@ namespace Microsoft.Vault.Explorer.ViewModels
 
         // ── Public vault state (legacy — kept for code-behind and OnClosing) ───
         public VaultAlias? CurrentVaultAlias { get; private set; }
-        public Library.Vault? CurrentVault { get; private set; }
+
+        private Library.Vault? _currentVault;
+        public Library.Vault? CurrentVault
+        {
+            get => _currentVault;
+            private set => this.RaiseAndSetIfChanged(ref _currentVault, value);
+        }
 
         // ── Window title ───────────────────────────────────────────────────────
         private string _title = Globals.AppName;
